@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#16A34A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="House Helper">
+<link rel="manifest" href="manifest.json">
+<title>House Helper</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+window.process = window.process || { env: {} };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="native.js"></script>
+<script src="analytics.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app-loading-gate" style="position:fixed;inset:0;background:var(--bg,#F5F8F6);z-index:9999;display:flex;align-items:center;justify-content:center">
+  <div class="spinner"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- ══ LOGIN ══ -->
+<div id="screen-login" class="screen active">
+  <div class="login-hero" style="position:relative;overflow:hidden">
+    <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center">
+      <span id="logo-slot-login" class="logo-slot" data-size="96"></span>
+      <h1 style="color:white;font-size:26px;font-weight:900;margin-bottom:6px">House Helper</h1>
+      <p style="color:rgba(255,255,255,.75);font-size:13px;letter-spacing:.5px">HELPING HOMES, BETTER LIVING</p>
+    </div>
+  </div>
+  <div class="login-form" style="flex:1">
+    <h2 style="font-size:22px;margin-bottom:6px">Welcome back! 👋</h2>
+    <p style="color:var(--text-2);font-size:14px;margin-bottom:28px">Enter your phone number to continue</p>
+    <div class="phone-row">
+      <div class="country-code">🇮🇳 +91</div>
+      <input type="tel" id="phone-input" placeholder="10-digit mobile number" maxlength="10" oninput="this.value=this.value.replace(/\D/g,'')">
+    </div>
+    <button class="btn btn-primary" onclick="sendOTP()">Send OTP →</button>
+    <p style="font-size:12px;color:var(--text-3);text-align:center;margin-top:20px;line-height:1.6">By continuing, you agree to our Terms of Service and Privacy Policy</p>
+    <div style="margin-top:24px;padding:14px;background:var(--bg);border-radius:var(--r-md);text-align:center;border:1px dashed var(--border)">
+      <p style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:2px">⚡ Demo Mode Active</p>
+      <p style="font-size:12px;color:var(--text-3)">Any 10 digits → any 6-digit OTP works</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ OTP ══ -->
+<div id="screen-otp" class="screen" style="background:var(--bg)">
+  <div style="padding:52px 24px 0"><button onclick="showScreen('login')" style="background:none;border:none;font-size:15px;color:var(--primary);font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">← Back</button></div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 24px">
+    <div style="width:80px;height:80px;border-radius:20px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:20px">📱</div>
+    <h2 style="font-size:26px;margin-bottom:10px;text-align:center">Verify your number</h2>
+    <p id="otp-subtitle" style="color:var(--text-2);text-align:center;line-height:1.6;margin-bottom:32px">Enter the 6-digit code</p>
+    <div class="otp-boxes">
+      <input class="otp-box" maxlength="1" type="tel" id="otp0" oninput="otpInput(0,this)">
+      <input class="otp-box" maxlength="1" type="tel" id="otp1" oninput="otpInput(1,this)">
+      <input class="otp-box" maxlength="1" type="tel" id="otp2" oninput="otpInput(2,this)">
+      <input class="otp-box" maxlength="1" type="tel" id="otp3" oninput="otpInput(3,this)">
+      <input class="otp-box" maxlength="1" type="tel" id="otp4" oninput="otpInput(4,this)">
+      <input class="otp-box" maxlength="1" type="tel" id="otp5" oninput="otpInput(5,this)">
+    </div>
+    <button class="btn btn-primary" onclick="verifyOTP()" style="max-width:320px">Verify &amp; Continue →</button>
+    <div id="resend-timer" style="margin-top:16px;font-size:13px;color:var(--text-3)"></div>
+  </div>
+</div>
+
+<!-- ══ PROFILE SETUP ══ -->
+<div id="screen-profile-setup" class="screen" style="background:var(--bg)">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px">
+    <div style="width:88px;height:88px;border-radius:22px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:20px">👋</div>
+    <h2 style="font-size:26px;margin-bottom:10px">Welcome!</h2>
+    <p style="color:var(--text-2);text-align:center;margin-bottom:32px;line-height:1.6">Let's quickly set up your profile.</p>
+    <div class="ig" style="width:100%"><label>Full Name *</label><input type="text" id="setup-name" placeholder="e.g. Rahul Sharma" autocapitalize="words"></div>
+    <div class="ig" style="width:100%"><label>Email (optional)</label><input type="email" id="setup-email" placeholder="your@email.com"></div>
+    <button class="btn btn-primary" onclick="completeSetup()" style="width:100%;margin-top:8px">Get Started →</button>
+  </div>
+</div>
+
+<!-- ══ HOME ══ -->
+<div id="screen-home" class="screen">
+  <!-- Top Header -->
+  <div style="background:white;padding:48px 20px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);box-shadow:var(--shadow-xs)">
+    <button style="background:none;border:none;cursor:pointer;padding:4px;display:flex;flex-direction:column;gap:5px" onclick="">
+      <div style="width:22px;height:2.5px;background:var(--navy);border-radius:2px"></div>
+      <div style="width:16px;height:2.5px;background:var(--navy);border-radius:2px"></div>
+      <div style="width:22px;height:2.5px;background:var(--navy);border-radius:2px"></div>
+    </button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="logo-slot-home-header" class="logo-slot" data-size="32"></span>
+      <div style="font-size:20px;font-weight:900;font-family:'Nunito',sans-serif"><span style="color:var(--navy)">House</span> <span style="color:var(--primary)">Helper</span></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div onclick="showTab('notifications')" style="position:relative;width:38px;height:38px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px">🔔<div style="position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#FF4B4B;border:2px solid white"></div></div>
+      <div id="home-avatar" onclick="showTab('profile')" style="width:38px;height:38px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;color:white;font-size:15px;font-weight:800;cursor:pointer">P</div>
+    </div>
+  </div>
+
+  <!-- Hero Banner — real photo with overlay copy -->
+  <div class="hero-photo-banner">
+    <img src="assets/hero-cleaner.png" alt="Professional House Helper cleaner" class="hero-photo-img">
+    <div class="hero-photo-overlay"></div>
+    <div class="hero-photo-content">
+      <div class="hero-trust-badge"><span class="dot-live"></span> Verified Professionals</div>
+      <h2 id="home-greeting" class="hero-photo-h">Home help you can actually trust</h2>
+      <p class="hero-photo-sub">Background-checked experts at your door in under 60 minutes — transparent pricing, zero surprises.</p>
+      <button class="btn btn-primary hero-photo-cta" onclick="showTab('services')">Book a Service →</button>
+    </div>
+  </div>
+
+  <!-- Search bar -->
+  <div style="padding:16px 20px 0">
+    <div class="home-search-bar">
+      <span style="font-size:18px;color:var(--text-3)">🔍</span>
+      <input type="text" id="home-search" placeholder="What service do you need today?" oninput="handleSearch(this.value)">
+      <span id="search-clear-btn" onclick="clearSearch()" style="display:none;cursor:pointer;color:var(--text-3);font-size:14px">✕</span>
+    </div>
+  </div>
+
+  <div id="search-results" style="display:none;flex:1;padding:16px;overflow-y:auto;padding-bottom:90px"></div>
+
+  <div class="content" id="home-main-content" style="padding-top:18px">
+    <!-- Active booking widget -->
+    <div id="active-booking-widget" style="display:none;background:linear-gradient(135deg,var(--primary-darker),var(--primary));border-radius:var(--r-lg);padding:14px 16px;margin-bottom:18px;cursor:pointer;color:white;box-shadow:0 4px 16px rgba(15,140,61,.35)" onclick="showTab('bookings')">
+      <div style="font-size:11px;opacity:.75;margin-bottom:4px;font-weight:700;letter-spacing:.5px">ACTIVE BOOKING</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div id="active-booking-name" style="font-size:15px;font-weight:700"></div>
+        <div id="active-booking-status" style="font-size:12px;background:rgba(255,255,255,.2);padding:4px 10px;border-radius:var(--r-full);font-weight:700"></div>
+      </div>
+    </div>
+
+    <!-- Category icon grid -->
+    <div class="section-title" style="margin-bottom:10px">Categories <a onclick="showTab('services')">See all →</a></div>
+    <div id="home-categories" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px 8px;margin-bottom:24px"></div>
+
+    <!-- Popular Services -->
+    <div class="section-title">Popular Services <a onclick="showTab('services')">See all →</a></div>
+    <div id="home-featured" class="popular-scroll"></div>
+
+    <!-- Special Offers -->
+    <div class="section-title" style="margin-top:22px">Special Offers</div>
+    <div class="offers-scroll">
+      <div class="offer-card offer-green">
+        <div class="offer-pct">20% OFF</div>
+        <div class="offer-title">Your First Booking</div>
+        <div class="offer-sub">Use code <b>FIRST20</b> at checkout</div>
+      </div>
+      <div class="offer-card offer-navy">
+        <div class="offer-pct">₹199</div>
+        <div class="offer-title">Weekend Cleaning Offer</div>
+        <div class="offer-sub">Flat price, Sat–Sun only</div>
+      </div>
+    </div>
+
+    <!-- Why Choose Us -->
+    <div class="section-title" style="margin-top:22px;margin-bottom:12px">Why Choose House Helper</div>
+    <div class="why-grid">
+      <div class="why-card"><div class="why-ic" style="background:#E9F8EF">✅</div><div class="why-label">Verified Professionals</div></div>
+      <div class="why-card"><div class="why-ic" style="background:#E6F1FB">🛡️</div><div class="why-label">Background Checked</div></div>
+      <div class="why-card"><div class="why-ic" style="background:#FFF7ED">⚡</div><div class="why-label">Instant Booking</div></div>
+      <div class="why-card"><div class="why-ic" style="background:#FAECE7">💸</div><div class="why-label">Transparent Pricing</div></div>
+      <div class="why-card"><div class="why-ic" style="background:#F3E8FF">🔒</div><div class="why-label">Secure Payments</div></div>
+      <div class="why-card"><div class="why-ic" style="background:#F1F5F9">🎧</div><div class="why-label">24/7 Support</div></div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-band">
+      <div class="stat-box"><div class="stat-box-num" data-count="10000" data-suffix="+">0</div><div class="stat-box-label">Happy Customers</div></div>
+      <div class="stat-box"><div class="stat-box-num" data-count="50000" data-suffix="+">0</div><div class="stat-box-label">Completed Jobs</div></div>
+      <div class="stat-box"><div class="stat-box-num" data-count="4.9" data-decimal="1" data-suffix="★">0</div><div class="stat-box-label">Average Rating</div></div>
+    </div>
+
+    <!-- Customer Reviews -->
+    <div class="section-title" style="margin-top:22px;margin-bottom:12px">Customer Reviews</div>
+    <div class="review-scroll">
+      <div class="review-card">
+        <div class="review-head"><div class="review-avatar" style="background:var(--primary)">R</div><div><div class="review-name">Rohit Sharma</div><div class="review-stars">★★★★★</div></div></div>
+        <p class="review-text">"Booked an AC service in the morning, technician was here by noon. Clean, professional and fairly priced."</p>
+      </div>
+      <div class="review-card">
+        <div class="review-head"><div class="review-avatar" style="background:var(--navy)">A</div><div><div class="review-name">Asha Verma</div><div class="review-stars">★★★★★</div></div></div>
+        <p class="review-text">"The deep cleaning team was incredibly thorough. My kitchen hasn't looked this good in years!"</p>
+      </div>
+      <div class="review-card">
+        <div class="review-head"><div class="review-avatar" style="background:#F59E0B">S</div><div><div class="review-name">Suresh Patel</div><div class="review-stars">★★★★★</div></div></div>
+        <p class="review-text">"Transparent pricing, no hidden charges. Helper was verified and very courteous. Highly recommend."</p>
+      </div>
+    </div>
+  </div>
+
+    <nav class="bottom-nav">
+    <div class="nav-item" onclick="showTab('home')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></div>
+    <div class="nav-item" onclick="showTab('bookings')"><span class="nav-icon">📋</span><span class="nav-label">Bookings</span></div>
+    <div class="nav-item" onclick="showTab('services')"><span class="nav-icon">🧭</span><span class="nav-label">Explore</span></div>
+    <div class="nav-item" onclick="showTab('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Notifications</span></div>
+    <div class="nav-item" onclick="showTab('profile')"><span class="nav-icon">👤</span><span class="nav-label">Profile</span></div>
+  </nav>
+</div>
+
+<!-- ══ NOTIFICATIONS ══ -->
+<div id="screen-notifications" class="screen">
+  <div style="background:white;padding:48px 20px 14px;border-bottom:1px solid var(--border)">
+    <h1 style="font-size:20px;font-weight:900;color:var(--navy)">Notifications</h1>
+  </div>
+  <div class="content" id="notifications-content" style="padding-bottom:90px">
+    <div class="empty"><div class="empty-icon">🔔</div><h3>No notifications yet</h3><p>Booking updates and offers will show up here.</p></div>
+  </div>
+    <nav class="bottom-nav">
+    <div class="nav-item" onclick="showTab('home')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></div>
+    <div class="nav-item" onclick="showTab('bookings')"><span class="nav-icon">📋</span><span class="nav-label">Bookings</span></div>
+    <div class="nav-item" onclick="showTab('services')"><span class="nav-icon">🧭</span><span class="nav-label">Explore</span></div>
+    <div class="nav-item" onclick="showTab('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Notifications</span></div>
+    <div class="nav-item" onclick="showTab('profile')"><span class="nav-icon">👤</span><span class="nav-label">Profile</span></div>
+  </nav>
+</div>
+
+<!-- ══ SERVICES ══ -->
+<div id="screen-services" class="screen">
+  <div id="services-header" style="background:linear-gradient(135deg,var(--primary-darker),var(--primary));padding:52px 20px 20px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <span id="logo-slot-services-header" class="logo-slot" data-size="32" data-light="1"></span>
+      <span style="color:white;font-size:18px;font-weight:800;font-family:'Nunito',sans-serif">Our Services</span>
+    </div>
+    <!-- Search in services -->
+    <div class="search-box" style="box-shadow:none;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.15)">
+      <span style="font-size:16px;color:rgba(255,255,255,.7)">🔍</span>
+      <input type="text" id="services-search" placeholder="Search for services..." oninput="handleServicesSearch(this.value)" style="background:transparent;color:white;font-size:14px">
+      <span id="svc-search-clear" onclick="clearServicesSearch()" style="display:none;cursor:pointer;color:rgba(255,255,255,.7);font-size:14px">✕</span>
+    </div>
+    <style>.search-box input::placeholder{color:rgba(255,255,255,.6)!important}</style>
+  </div>
+  <div id="services-chips-bar" style="background:white;border-bottom:1px solid var(--border);display:none">
+    <div class="scroll-x" id="services-chips" style="padding:10px 16px;gap:8px"></div>
+  </div>
+  <div class="content" id="services-content"></div>
+    <nav class="bottom-nav">
+    <div class="nav-item" onclick="showTab('home')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></div>
+    <div class="nav-item" onclick="showTab('bookings')"><span class="nav-icon">📋</span><span class="nav-label">Bookings</span></div>
+    <div class="nav-item" onclick="showTab('services')"><span class="nav-icon">🧭</span><span class="nav-label">Explore</span></div>
+    <div class="nav-item" onclick="showTab('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Notifications</span></div>
+    <div class="nav-item" onclick="showTab('profile')"><span class="nav-icon">👤</span><span class="nav-label">Profile</span></div>
+  </nav>
+</div>
+
+<!-- ══ SERVICE DETAIL ══ -->
+<div id="screen-service-detail" class="screen">
+  <div style="position:relative">
+    <div id="service-detail-hero" style="width:100%;height:240px;background:linear-gradient(135deg,var(--primary-light),var(--primary-mid));display:flex;align-items:center;justify-content:center;font-size:80px"></div>
+    <button onclick="goBack()" style="position:absolute;top:52px;left:16px;width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.4);border:none;color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)">←</button>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding-bottom:110px">
+    <div style="padding:20px">
+      <div id="service-detail-cat" style="display:inline-block;background:var(--primary-light);color:var(--primary);font-size:12px;font-weight:700;padding:4px 12px;border-radius:var(--r-full);margin-bottom:10px"></div>
+      <h1 id="service-detail-name" style="font-size:24px;font-weight:900;margin-bottom:8px;line-height:1.3;color:var(--navy)"></h1>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+        <span id="service-stars-display" style="font-size:16px;color:#F59E0B"></span>
+        <span id="service-rating-text" style="font-size:13px;color:var(--text-2)"></span>
+      </div>
+      <div id="service-detail-price" style="font-size:24px;font-weight:900;color:var(--primary);margin-bottom:20px"></div>
+      <div class="info-cards">
+        <div class="info-card"><div class="ic-icon">⚡</div><div class="ic-label">Response</div><div class="ic-value">Same day</div></div>
+        <div class="info-card"><div class="ic-icon">✅</div><div class="ic-label">Verified</div><div class="ic-value">Background checked</div></div>
+        <div class="info-card"><div class="ic-icon">🛡️</div><div class="ic-label">Guarantee</div><div class="ic-value">Quality assured</div></div>
+      </div>
+      <div id="service-detail-desc" style="font-size:15px;color:var(--text-2);line-height:1.8;margin-bottom:24px"></div>
+      <h3 style="font-size:16px;font-weight:800;margin-bottom:14px;color:var(--navy)">What to expect</h3>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;gap:14px;align-items:flex-start"><div style="width:28px;height:28px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white;flex-shrink:0">1</div><p style="font-size:14px;color:var(--text-2);line-height:1.6;padding-top:5px">Our professional will arrive at your address on time</p></div>
+        <div style="display:flex;gap:14px;align-items:flex-start"><div style="width:28px;height:28px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white;flex-shrink:0">2</div><p style="font-size:14px;color:var(--text-2);line-height:1.6;padding-top:5px">They will assess the problem and confirm the final price</p></div>
+        <div style="display:flex;gap:14px;align-items:flex-start"><div style="width:28px;height:28px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white;flex-shrink:0">3</div><p style="font-size:14px;color:var(--text-2);line-height:1.6;padding-top:5px">Work completed professionally with proper tools</p></div>
+        <div style="display:flex;gap:14px;align-items:flex-start"><div style="width:28px;height:28px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white;flex-shrink:0">4</div><p style="font-size:14px;color:var(--text-2);line-height:1.6;padding-top:5px">Pay only after you are 100% satisfied with the work</p></div>
+      </div>
+    </div>
+  </div>
+  <div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:white;border-top:1px solid var(--border);padding:12px 20px 28px;display:flex;gap:16px;align-items:center;box-shadow:0 -4px 20px rgba(0,0,0,.06)">
+    <div id="service-detail-footer-price" style="flex:1"></div>
+    <button class="btn btn-primary" style="flex:2" onclick="startBooking()">Book Now →</button>
+  </div>
+</div>
+
+<!-- ══ BOOKING FLOW ══ -->
+<div id="screen-booking" class="screen">
+  <div style="background:white;padding:52px 16px 0;border-bottom:1px solid var(--border)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <button onclick="bookingBack()" style="background:none;border:none;font-size:22px;color:var(--primary);cursor:pointer;font-weight:700">←</button>
+      <span id="booking-step-label" style="font-size:13px;font-weight:700;color:var(--text-2)">Step 1 of 5</span>
+      <button onclick="showTab('home')" style="background:none;border:none;font-size:13px;color:var(--error);font-weight:700;cursor:pointer">Cancel</button>
+    </div>
+    <div class="steps-bar" id="booking-steps-bar"></div>
+    <div class="progress-bar-outer"><div class="progress-bar-inner" id="booking-progress" style="width:20%"></div></div>
+  </div>
+
+  <!-- Step 1: Address -->
+  <div id="booking-step-1" class="content" style="padding-bottom:90px">
+    <div style="background:var(--primary-light);border-radius:var(--r-lg);padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:20px;border-left:3px solid var(--primary)">
+      <span style="font-size:24px">🔧</span>
+      <div><div style="font-size:12px;color:var(--text-2);font-weight:600">Booking for</div><div id="booking-service-name" style="font-size:15px;font-weight:800;color:var(--primary-darker)"></div></div>
+    </div>
+    <h2 style="font-size:22px;font-weight:900;margin-bottom:6px;color:var(--navy)">Service Address</h2>
+    <p style="color:var(--text-2);font-size:14px;margin-bottom:16px">Where should our team visit?</p>
+    <div id="saved-addresses-list"></div>
+    <div class="ig"><label>Street Address *</label><input type="text" id="b-addr1" placeholder="House/Flat no., Street, Area" autocapitalize="words"></div>
+    <div class="ig"><label>Apartment / Floor (optional)</label><input type="text" id="b-addr2" placeholder="e.g. Floor 3, Tower B" autocapitalize="words"></div>
+    <div style="display:flex;gap:12px">
+      <div class="ig" style="flex:1.5"><label>City *</label><input type="text" id="b-city" placeholder="City" autocapitalize="words"></div>
+      <div class="ig" style="flex:1"><label>PIN Code *</label><input type="tel" id="b-pin" placeholder="6-digit" maxlength="6" oninput="this.value=this.value.replace(/\D/g,'')"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+      <input type="checkbox" id="save-address-cb" style="width:16px;height:16px;accent-color:var(--primary)">
+      <label for="save-address-cb" style="font-size:13px;color:var(--text-2)">Save this address for future bookings</label>
+    </div>
+  </div>
+
+  <!-- Step 2: Schedule + Contact -->
+  <div id="booking-step-2" class="content" style="display:none;padding-bottom:90px">
+    <h2 style="font-size:22px;font-weight:900;margin-bottom:6px;color:var(--navy)">Schedule &amp; Contact</h2>
+    <p style="color:var(--text-2);font-size:14px;margin-bottom:24px">Choose when you need the service.</p>
+    <div class="ig"><label>Preferred Date</label><input type="date" id="b-date" min=""></div>
+    <div class="ig"><label>Preferred Time Slot</label><div class="slot-grid" id="time-slots"></div></div>
+    <div style="height:16px"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <div style="padding:13px 14px;border:1.5px solid var(--border);border-radius:var(--r-md);font-weight:700;white-space:nowrap;background:white;color:var(--text)">🇮🇳 +91</div>
+      <div class="ig" style="flex:1;margin-bottom:0"><input type="tel" id="b-phone" placeholder="10-digit mobile number" maxlength="10" oninput="this.value=this.value.replace(/\D/g,'')"></div>
+    </div>
+    <div class="note-box"><span style="font-size:18px">💬</span><p>We'll confirm your booking via WhatsApp on this number.</p></div>
+  </div>
+
+  <!-- Step 3: Problem -->
+  <div id="booking-step-3" class="content" style="display:none;padding-bottom:90px">
+    <h2 style="font-size:22px;font-weight:900;margin-bottom:6px;color:var(--navy)">Describe the Problem</h2>
+    <p style="color:var(--text-2);font-size:14px;margin-bottom:24px">Optional — helps our team arrive fully prepared.</p>
+    <div class="ig"><label>Problem Description (optional)</label><textarea id="b-desc" placeholder="e.g. The kitchen sink tap is dripping constantly and the handle is loose..."></textarea></div>
+    <p style="font-size:12px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Add Photos (optional, max 3)</p>
+    <p style="font-size:13px;color:var(--text-3);margin-bottom:14px">Photos help our team bring the right tools and parts.</p>
+    <div class="photo-grid" id="booking-photos">
+      <div class="photo-add" onclick="addPhoto()"><span>📷</span><p>Add Photo</p><p id="photo-count" style="font-size:10px;color:var(--text-3)">0/3</p></div>
+    </div>
+    <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="handlePhoto(this)" multiple>
+  </div>
+
+  <!-- Step 4: Payment -->
+  <div id="booking-step-4" class="content" style="display:none;padding-bottom:90px">
+    <h2 style="font-size:22px;font-weight:900;margin-bottom:6px;color:var(--navy)">Payment Method</h2>
+    <p style="color:var(--text-2);font-size:14px;margin-bottom:20px">How would you like to pay?</p>
+    <div class="pay-method-card selected" id="pay-after-card" onclick="selectPayment('pay_after')">
+      <div class="radio-circle"><div class="radio-dot"></div></div>
+      <div class="pay-method-info">
+        <h3>Pay After Service <span class="recommended-badge">Recommended</span></h3>
+        <p>Pay via UPI or cash after the work is done to your satisfaction.</p>
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:4px">
+          <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-2)"><span style="font-size:12px;color:var(--success);font-weight:800">✓</span>No upfront payment needed</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-2)"><span style="font-size:12px;color:var(--success);font-weight:800">✓</span>Pay only when satisfied</div>
+        </div>
+      </div>
+    </div>
+    <div class="pay-method-card" id="pay-before-card" onclick="selectPayment('pay_before')">
+      <div class="radio-circle"><div class="radio-dot"></div></div>
+      <div class="pay-method-info">
+        <h3>Pay Before Service (UPI)</h3>
+        <p>Scan our UPI QR code and upload the payment screenshot.</p>
+      </div>
+    </div>
+    <div id="upi-section" style="display:none">
+      <div class="upi-box">
+        <div class="upi-qr" id="upi-qr-display"><span style="font-size:64px">📱</span></div>
+        <div style="font-size:12px;color:var(--text-2);font-weight:600;margin-bottom:4px">UPI ID</div>
+        <div class="upi-id" id="upi-id-display">yourname@upi</div>
+        <p style="font-size:12px;color:var(--text-3);margin-top:6px">Open PhonePe / GPay / Paytm → Scan or pay to UPI ID</p>
+      </div>
+      <p style="font-size:12px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Upload Payment Screenshot *</p>
+      <div id="screenshot-area" onclick="document.getElementById('screenshot-input').click()" style="border:2px dashed var(--border);border-radius:var(--r-lg);padding:24px;text-align:center;cursor:pointer;background:var(--bg);margin-bottom:16px;transition:border-color .2s">
+        <div style="font-size:32px;margin-bottom:8px">📤</div>
+        <p style="font-weight:700;color:var(--primary);font-size:14px">Upload Screenshot</p>
+        <p style="font-size:12px;color:var(--text-3);margin-top:4px">Tap to select from gallery</p>
+      </div>
+      <input type="file" id="screenshot-input" accept="image/*" style="display:none" onchange="handleScreenshot(this)">
+    </div>
+    <div style="margin-top:16px;background:white;border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-sm)">
+      <p style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🎁 Have a promo code?</p>
+      <div class="promo-row">
+        <input type="text" id="promo-input" placeholder="e.g. FIRST50" style="text-transform:uppercase">
+        <button class="btn btn-outline btn-sm" onclick="applyPromo()">Apply</button>
+      </div>
+      <div id="promo-result" style="font-size:13px;min-height:18px"></div>
+      <p style="font-size:11px;color:var(--text-3);margin-top:6px">Try: FIRST50 · SAVE10 · WELCOME · HOUSE20</p>
+    </div>
+  </div>
+
+  <!-- Step 5: Review -->
+  <div id="booking-step-5" class="content" style="display:none;padding-bottom:110px">
+    <h2 style="font-size:22px;font-weight:900;margin-bottom:6px;color:var(--navy)">Review Booking</h2>
+    <p style="color:var(--text-2);font-size:14px;margin-bottom:20px">Please confirm all details before submitting.</p>
+    <div id="booking-review-content"></div>
+    <div style="background:var(--bg);border-radius:var(--r-md);padding:12px;text-align:center;border:1px dashed var(--border)">
+      <p style="font-size:12px;color:var(--text-3);line-height:1.6">By confirming, you agree that our team will contact you to schedule the visit. Final pricing may vary based on actual scope of work.</p>
+    </div>
+  </div>
+
+  <div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:white;border-top:1px solid var(--border);padding:14px 16px 28px;box-shadow:0 -4px 20px rgba(0,0,0,.06)">
+    <button class="btn btn-primary" id="booking-next-btn" onclick="bookingNext()">Next →</button>
+  </div>
+</div>
+
+<!-- ══ CONFIRMED ══ -->
+<div id="screen-confirmed" class="screen">
+  <div class="success-container">
+    <div class="success-icon-wrap">✅</div>
+    <h1 style="font-size:26px;margin-bottom:12px;color:var(--navy)">Booking Confirmed!</h1>
+    <p style="color:var(--text-2);font-size:14px;line-height:1.7;margin-bottom:24px;text-align:center">Your booking has been received. Our team will contact you shortly to confirm the appointment.</p>
+    <div class="booking-id-card"><div class="label">Booking ID</div><div class="id" id="confirmed-booking-id">#--------</div><div class="hint">Save this for reference</div></div>
+    <div class="section-card" style="width:100%;margin-bottom:16px">
+      <h3 style="font-size:15px;font-weight:800;margin-bottom:12px;color:var(--navy)">What happens next?</h3>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;gap:12px"><div style="width:32px;height:32px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">📞</div><p style="font-size:13px;color:var(--text-2);line-height:1.5;padding-top:6px">We'll call you to confirm the appointment time</p></div>
+        <div style="display:flex;gap:12px"><div style="width:32px;height:32px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">👷</div><p style="font-size:13px;color:var(--text-2);line-height:1.5;padding-top:6px">A verified professional will be assigned to you</p></div>
+        <div style="display:flex;gap:12px"><div style="width:32px;height:32px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">💳</div><p style="font-size:13px;color:var(--text-2);line-height:1.5;padding-top:6px">Pay only after you're 100% satisfied</p></div>
+      </div>
+    </div>
+    <div style="width:100%;display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-primary" onclick="viewBookings()">View Booking Details</button>
+      <button class="btn btn-whatsapp" onclick="openWhatsApp()">💬 Message us on WhatsApp</button>
+      <button onclick="showTab('home')" style="background:none;border:none;font-size:14px;color:var(--text-2);cursor:pointer;padding:8px;font-weight:600">← Back to Home</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BOOKINGS ══ -->
+<div id="screen-bookings" class="screen">
+  <div style="background:linear-gradient(135deg,var(--primary-darker),var(--primary));padding:52px 20px 18px">
+    <h1 style="color:white;font-size:22px;font-weight:900">My Bookings</h1>
+    <p id="bookings-count" style="color:rgba(255,255,255,.75);font-size:13px;margin-top:2px">0 total bookings</p>
+  </div>
+  <div style="background:white;border-bottom:1px solid var(--border)">
+    <div class="scroll-x" id="bookings-filter-chips" style="padding:10px 16px;gap:8px"></div>
+  </div>
+  <div class="content" id="bookings-content"></div>
+    <nav class="bottom-nav">
+    <div class="nav-item" onclick="showTab('home')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></div>
+    <div class="nav-item" onclick="showTab('bookings')"><span class="nav-icon">📋</span><span class="nav-label">Bookings</span></div>
+    <div class="nav-item" onclick="showTab('services')"><span class="nav-icon">🧭</span><span class="nav-label">Explore</span></div>
+    <div class="nav-item" onclick="showTab('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Notifications</span></div>
+    <div class="nav-item" onclick="showTab('profile')"><span class="nav-icon">👤</span><span class="nav-label">Profile</span></div>
+  </nav>
+</div>
+
+<!-- ══ BOOKING DETAIL ══ -->
+<div id="screen-booking-detail" class="screen">
+  <div style="background:linear-gradient(135deg,var(--primary-darker),var(--primary));padding:52px 20px 16px">
+    <div class="header-row">
+      <button onclick="goBack()" style="background:rgba(255,255,255,.2);border:none;color:white;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center">←</button>
+      <div style="text-align:center"><div style="color:white;font-size:16px;font-weight:800" id="bd-title">Booking</div><div style="color:rgba(255,255,255,.7);font-size:12px;margin-top:2px" id="bd-date"></div></div>
+      <div style="width:36px"></div>
+    </div>
+  </div>
+  <div class="content" id="booking-detail-content" style="padding-bottom:90px"></div>
+    <nav class="bottom-nav">
+    <div class="nav-item" onclick="showTab('home')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></div>
+    <div class="nav-item" onclick="showTab('bookings')"><span class="nav-icon">📋</span><span class="nav-label">Bookings</span></div>
+    <div class="nav-item" onclick="showTab('services')"><span class="nav-icon">🧭</span><span class="nav-label">Explore</span></div>
+    <div class="nav-item" onclick="showTab('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Notifications</span></div>
+    <div class="nav-item" onclick="showTab('profile')"><span class="nav-icon">👤</span><span class="nav-label">Profile</span></div>
+  </nav>
+</div>
+
+<!-- ══ PROFILE ══ -->
+<div id="screen-profile" class="screen">
+  <div style="background:linear-gradient(135deg,var(--navy),var(--primary-darker));padding:52px 20px 24px">
+    <div style="display:flex;align-items:center;gap:14px">
+      <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--primary-mid),var(--primary));display:flex;align-items:center;justify-content:center;color:white;font-size:24px;font-weight:800;border:3px solid rgba(255,255,255,.3)" id="profile-avatar-display">?</div>
+      <div>
+        <div style="color:white;font-size:18px;font-weight:800" id="profile-name-display">User</div>
+        <div style="color:rgba(255,255,255,.7);font-size:13px;margin-top:2px" id="profile-phone-display"></div>
+        <div style="color:rgba(255,255,255,.55);font-size:12px" id="profile-email-display"></div>
+      </div>
+      <button class="btn btn-xs" style="margin-left:auto;background:rgba(255,255,255,.2);color:white;border:1px solid rgba(255,255,255,.3)" onclick="openModal('edit-profile-modal')">Edit</button>
+    </div>
+  </div>
+  <div class="content" style="padding-bottom:90px;padding-top:20px">
+    <div class="card" style="margin-bottom:12px;padding:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.8px;padding:8px 8px 6px">Account</div>
+      <div class="menu-item" style="padding:12px 8px" onclick="openModal('edit-profile-modal')"><div class="menu-item-icon-wrap">✏️</div><span class="menu-item-label">Edit Profile</span><span class="menu-item-arrow">›</span></div>
+      <div class="menu-item" style="padding:12px 8px" onclick="showSavedAddresses()"><div class="menu-item-icon-wrap">📍</div><span class="menu-item-label">Saved Addresses</span><span class="menu-item-arrow">›</span></div>
+      <div class="menu-item" style="padding:12px 8px" onclick="showTab('bookings')"><div class="menu-item-icon-wrap">📋</div><span class="menu-item-label">My Bookings</span><span class="menu-item-arrow">›</span></div>
+    </div>
+    <div class="card" style="margin-bottom:12px;padding:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.8px;padding:8px 8px 6px">Support</div>
+      <div class="menu-item" style="padding:12px 8px" onclick="callSupport()"><div class="menu-item-icon-wrap">📞</div><span class="menu-item-label">Call Support</span><span class="menu-item-value" id="support-phone-display"></span><span class="menu-item-arrow">›</span></div>
+      <div class="menu-item" style="padding:12px 8px" onclick="openWhatsApp()"><div class="menu-item-icon-wrap">💬</div><span class="menu-item-label">WhatsApp Support</span><span class="menu-item-arrow">›</span></div>
+    </div>
+    <div class="card" style="margin-bottom:12px;padding:8px">
+      <div class="menu-item" style="padding:12px 8px;border-bottom:none" onclick="logout()"><div class="menu-item-icon-wrap" style="background:#FEF2F2">🚪</div><span class="menu-item-label" style="color:var(--error)">Sign Out</span></div>
+    </div>
+    <div class="version-tap" onclick="versionTap()">
+      <span id="logo-slot-version" class="logo-slot" data-size="32" style="opacity:.5"></span>
+      <div class="version-text">House Helper v2.0.0</div>
+      <div style="font-size:11px;color:var(--text-3);margin-top:2px">Helping Homes, Better Living</div>
+    </div>
+  </div>
+    <nav class="bottom-nav">
+    <div class="nav-item" onclick="showTab('home')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></div>
+    <div class="nav-item" onclick="showTab('bookings')"><span class="nav-icon">📋</span><span class="nav-label">Bookings</span></div>
+    <div class="nav-item" onclick="showTab('services')"><span class="nav-icon">🧭</span><span class="nav-label">Explore</span></div>
+    <div class="nav-item" onclick="showTab('notifications')"><span class="nav-icon">🔔</span><span class="nav-label">Notifications</span></div>
+    <div class="nav-item" onclick="showTab('profile')"><span class="nav-icon">👤</span><span class="nav-label">Profile</span></div>
+  </nav>
+</div>
+
+<!-- ══ MODALS ══ -->
+<!-- Status Modal -->
+<div class="modal-overlay" id="status-modal" onclick="if(event.target===this)closeModal('status-modal')">
+  <div class="modal"><div class="modal-header"><h2>Update Booking</h2><button class="modal-close" onclick="closeModal('status-modal')">✕</button></div>
+  <div class="modal-body">
+    <p style="font-size:12px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">New Status</p>
+    <div id="status-options" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px"></div>
+    <div class="ig"><label>Worker Name (optional)</label><input type="text" id="modal-worker-name" placeholder="Name of assigned worker"></div>
+    <div class="ig"><label>Worker Phone (optional)</label><input type="tel" id="modal-worker-phone" placeholder="+91 XXXXXXXXXX"></div>
+    <div class="ig"><label>Internal Notes (optional)</label><textarea id="modal-notes" placeholder="Notes visible to admin only" style="height:80px"></textarea></div>
+    <button class="btn btn-primary" onclick="saveStatusUpdate()">Save Changes</button>
+  </div></div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal-overlay" id="edit-profile-modal" onclick="if(event.target===this)closeModal('edit-profile-modal')">
+  <div class="modal"><div class="modal-header"><h2>Edit Profile</h2><button class="modal-close" onclick="closeModal('edit-profile-modal')">✕</button></div>
+  <div class="modal-body">
+    <div class="ig"><label>Full Name</label><input type="text" id="edit-name" autocapitalize="words"></div>
+    <div class="ig"><label>Email (optional)</label><input type="email" id="edit-email" placeholder="your@email.com"></div>
+    <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
+  </div></div>
+</div>
+
+<!-- Saved Addresses Modal -->
+<div class="modal-overlay" id="addresses-modal" onclick="if(event.target===this)closeModal('addresses-modal')">
+  <div class="modal"><div class="modal-header"><h2>Saved Addresses</h2><button class="modal-close" onclick="closeModal('addresses-modal')">✕</button></div>
+  <div class="modal-body">
+    <div id="addresses-list"></div>
+    <button class="btn btn-outline" style="margin-top:12px" onclick="closeModal('addresses-modal');setTimeout(()=>openModal('add-address-modal'),300)">+ Add New Address</button>
+  </div></div>
+</div>
+
+<!-- Add Address Modal -->
+<div class="modal-overlay" id="add-address-modal" onclick="if(event.target===this)closeModal('add-address-modal')">
+  <div class="modal"><div class="modal-header"><h2>New Address</h2><button class="modal-close" onclick="closeModal('add-address-modal')">✕</button></div>
+  <div class="modal-body">
+    <div class="ig"><label>Label</label><input type="text" id="new-addr-label" placeholder="Home / Office / Other" value="Home"></div>
+    <div class="ig"><label>Street Address *</label><input type="text" id="new-addr-line1" placeholder="Flat no., Street, Area" autocapitalize="words"></div>
+    <div class="ig"><label>Apartment / Floor</label><input type="text" id="new-addr-line2" placeholder="Optional" autocapitalize="words"></div>
+    <div style="display:flex;gap:12px">
+      <div class="ig" style="flex:1.5"><label>City *</label><input type="text" id="new-addr-city" placeholder="City" autocapitalize="words"></div>
+      <div class="ig" style="flex:1"><label>PIN Code *</label><input type="tel" id="new-addr-pin" placeholder="6-digit" maxlength="6" oninput="this.value=this.value.replace(/\D/g,'')"></div>
+    </div>
+    <button class="btn btn-primary" onclick="saveNewAddress()">Save Address</button>
+  </div></div>
+</div>
+
+<!-- Category Modal -->
+<div class="modal-overlay" id="category-modal" onclick="if(event.target===this)closeModal('category-modal')">
+  <div class="modal"><div class="modal-header"><h2 id="cat-modal-title">Add Category</h2><button class="modal-close" onclick="closeModal('category-modal')">✕</button></div>
+  <div class="modal-body">
+    <div class="ig"><label>Name *</label><input type="text" id="cat-name" placeholder="e.g. Plumbing" autocapitalize="words"></div>
+    <div class="ig"><label>Description</label><input type="text" id="cat-desc" placeholder="Short description"></div>
+    <div class="ig"><label>Sort Order</label><input type="number" id="cat-sort" value="0" min="0"></div>
+    <div class="ig">
+      <label>Category Photo</label>
+      <div id="cat-upload-widget"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--border);margin-bottom:16px">
+      <span style="font-size:15px;color:var(--text)">Active (visible to customers)</span>
+      <input type="checkbox" id="cat-active" checked style="width:20px;height:20px;accent-color:var(--primary)">
+    </div>
+    <button class="btn btn-primary" id="cat-save-btn" onclick="saveCategoryModal()">Save Category</button>
+  </div></div>
+</div>
+
+<!-- Service Modal -->
+<div class="modal-overlay" id="service-modal" onclick="if(event.target===this)closeModal('service-modal')">
+  <div class="modal"><div class="modal-header"><h2 id="svc-modal-title">Add Service</h2><button class="modal-close" onclick="closeModal('service-modal')">✕</button></div>
+  <div class="modal-body">
+    <div class="ig"><label>Category *</label><select id="svc-category" style="width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);outline:none;background:white"></select></div>
+    <div class="ig"><label>Service Name *</label><input type="text" id="svc-name" placeholder="e.g. Leaking Tap Repair" autocapitalize="words"></div>
+    <div class="ig"><label>Description</label><textarea id="svc-desc" placeholder="What does this service include?" style="height:80px"></textarea></div>
+    <div style="display:flex;gap:12px">
+      <div class="ig" style="flex:1"><label>Base Price (₹)</label><input type="number" id="svc-price" placeholder="e.g. 299" min="0"></div>
+      <div class="ig" style="flex:1"><label>Price Unit</label><select id="svc-unit" style="width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:var(--r-md);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);outline:none;background:white"><option value="visit">visit</option><option value="hour">hour</option><option value="unit">unit</option><option value="room">room</option><option value="sqft">sqft</option><option value="day">day</option><option value="piece">piece</option></select></div>
+    </div>
+    <div class="ig"><label>Sort Order</label><input type="number" id="svc-sort" value="0" min="0"></div>
+    <div class="ig">
+      <label>Service Image</label>
+      <div id="svc-upload-widget"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--border)"><span style="font-size:15px;color:var(--text)">Active</span><input type="checkbox" id="svc-active" checked style="width:20px;height:20px;accent-color:var(--primary)"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--border);margin-bottom:16px"><span style="font-size:15px;color:var(--text)">Featured on Home Screen ⭐</span><input type="checkbox" id="svc-featured" style="width:20px;height:20px;accent-color:var(--primary)"></div>
+    <button class="btn btn-primary" id="svc-save-btn" onclick="saveServiceModal()">Save Service</button>
+  </div></div>
+</div>
+
+<!-- Rating Modal -->
+<div class="modal-overlay" id="rating-modal" onclick="if(event.target===this)closeModal('rating-modal')">
+  <div class="modal"><div class="modal-header"><h2>Rate Your Service</h2><button class="modal-close" onclick="closeModal('rating-modal')">✕</button></div>
+  <div class="modal-body" style="text-align:center">
+    <p style="font-size:15px;color:var(--text-2);margin-bottom:8px">How satisfied were you with the service?</p>
+    <div class="stars"><span class="star" onclick="setRating(1)">⭐</span><span class="star" onclick="setRating(2)">⭐</span><span class="star" onclick="setRating(3)">⭐</span><span class="star" onclick="setRating(4)">⭐</span><span class="star" onclick="setRating(5)">⭐</span></div>
+    <p id="rating-label" style="font-size:15px;font-weight:700;color:var(--primary);min-height:24px;margin-bottom:16px"></p>
+    <div class="ig" style="text-align:left"><label>Comment (optional)</label><textarea id="rating-comment" placeholder="Tell us about your experience…"></textarea></div>
+    <button class="btn btn-primary" onclick="submitRating()">Submit Review</button>
+    <button onclick="closeModal('rating-modal')" style="background:none;border:none;font-size:13px;color:var(--text-2);cursor:pointer;margin-top:12px;display:block;width:100%">Maybe later</button>
+  </div></div>
+</div>
+
+<!-- Invoice Modal -->
+<div class="modal-overlay" id="invoice-modal" onclick="if(event.target===this)closeModal('invoice-modal')">
+  <div class="modal"><div class="modal-header"><h2>Invoice</h2><button class="modal-close" onclick="closeModal('invoice-modal')">✕</button></div>
+  <div class="modal-body" id="invoice-content"></div></div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

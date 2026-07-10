@@ -1,0 +1,1945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>House Helper — Admin Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&display=swap" rel="stylesheet">
+<script>
+window.process = window.process || { env: {} };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+/* ── RESET & BASE ─────────────────────────────────────────── */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:#0F172A;background:#F1F5F9;-webkit-font-smoothing:antialiased}
+a{text-decoration:none;color:inherit}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit}
+:root{
+  --primary:#16A34A;--primary-dark:#0F8C3D;--primary-light:#DCFCE7;--primary-mid:#22C55E;
+  --navy:#0F172A;--navy2:#1E293B;--navy3:#334155;
+  --text:#0F172A;--text2:#475569;--text3:#94A3B8;
+  --bg:#F1F5F9;--surface:#FFFFFF;--border:#E2E8F0;
+  --red:#EF4444;--amber:#F59E0B;--blue:#3B82F6;--purple:#8B5CF6;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 16px rgba(0,0,0,.08);
+  --shadow-lg:0 10px 40px rgba(0,0,0,.12);
+  --r:8px;--r-md:10px;--r-lg:14px;--r-xl:18px;--r-full:9999px;
+  --sidebar-w:240px;--topbar-h:60px;
+}
+
+/* ── SCROLLBAR ────────────────────────────────────────────── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:99px}
+
+/* ── LOGIN ────────────────────────────────────────────────── */
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0F172A 0%,#1E3A5F 50%,#0F2D1F 100%);position:relative;overflow:hidden}
+#login-screen::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 70% 30%,rgba(22,163,74,.15),transparent 60%)}
+.login-card{background:white;border-radius:var(--r-xl);padding:40px;width:360px;box-shadow:var(--shadow-lg);position:relative;z-index:1}
+.login-brand{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.login-brand-logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:flex;align-items:center;justify-content:center;font-size:20px}
+.login-brand-name{font-size:18px;font-weight:800;color:var(--navy)}
+.login-brand-sub{font-size:11px;color:var(--text3);font-weight:500;letter-spacing:.5px;text-transform:uppercase}
+.login-card h2{font-size:20px;font-weight:700;margin-bottom:4px}
+.login-card p{font-size:13px;color:var(--text2);margin-bottom:28px}
+.pin-row{display:flex;gap:10px;justify-content:center;margin-bottom:20px}
+.pin-input{width:56px;height:60px;border:2px solid var(--border);border-radius:var(--r-lg);font-size:24px;text-align:center;font-weight:700;color:var(--navy);transition:border-color .2s;outline:none;-webkit-text-security:disc;text-security:disc}
+.pin-input:focus{border-color:var(--primary)}
+.pin-error{color:var(--red);font-size:12.5px;text-align:center;min-height:18px;margin-bottom:16px}
+.btn-login{width:100%;padding:13px;background:var(--primary);color:white;border:none;border-radius:var(--r-lg);font-size:15px;font-weight:700;transition:background .2s,transform .15s}
+.btn-login:hover{background:var(--primary-dark);transform:translateY(-1px)}
+
+/* ── APP LAYOUT ───────────────────────────────────────────── */
+#app{display:none;height:100vh;flex-direction:row}
+#app.visible{display:flex}
+
+/* ── SIDEBAR ──────────────────────────────────────────────── */
+#sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--navy);display:flex;flex-direction:column;height:100vh;overflow-y:auto;overflow-x:hidden;flex-shrink:0}
+.sidebar-brand{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:10px}
+.sidebar-brand-logo{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.sidebar-brand-text{flex:1;min-width:0}
+.sidebar-brand-name{font-size:14px;font-weight:700;color:white;line-height:1.2}
+.sidebar-brand-role{font-size:10.5px;color:rgba(255,255,255,.4);font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+.sidebar-nav{padding:10px 10px;flex:1}
+.sidebar-section{font-size:10px;font-weight:600;color:rgba(255,255,255,.3);letter-spacing:1px;text-transform:uppercase;padding:14px 8px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r);cursor:pointer;color:rgba(255,255,255,.65);font-size:13.5px;font-weight:500;transition:all .15s;margin-bottom:2px;position:relative}
+.nav-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.9)}
+.nav-item.active{background:rgba(22,163,74,.2);color:var(--primary-mid)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:18px;background:var(--primary);border-radius:0 2px 2px 0}
+.nav-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--red);color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:var(--r-full)}
+.sidebar-footer{padding:14px 10px;border-top:1px solid rgba(255,255,255,.06)}
+.sidebar-user{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--r);cursor:pointer;transition:background .15s}
+.sidebar-user:hover{background:rgba(255,255,255,.06)}
+.sidebar-avatar{width:32px;height:32px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0}
+.sidebar-user-info{flex:1;min-width:0}
+.sidebar-user-name{font-size:12.5px;font-weight:600;color:white}
+.sidebar-user-role{font-size:10.5px;color:rgba(255,255,255,.4)}
+
+/* ── MAIN AREA ────────────────────────────────────────────── */
+#main{flex:1;display:flex;flex-direction:column;min-width:0;height:100vh;overflow:hidden}
+#topbar{height:var(--topbar-h);background:white;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;flex-shrink:0;box-shadow:var(--shadow)}
+.topbar-title{font-size:17px;font-weight:700;flex:1}
+.topbar-search{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-full);padding:7px 14px;width:260px}
+.topbar-search input{border:none;outline:none;background:transparent;font-size:13px;width:100%}
+.topbar-search span{font-size:15px;color:var(--text3)}
+.topbar-actions{display:flex;align-items:center;gap:8px}
+.topbar-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--border);background:white;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:background .15s;position:relative}
+.topbar-btn:hover{background:var(--bg)}
+.notif-dot{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid white}
+#content{flex:1;overflow-y:auto;padding:24px}
+
+/* ── BUTTONS ──────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r);font-size:13.5px;font-weight:600;border:none;transition:all .15s;cursor:pointer;white-space:nowrap}
+.btn-primary{background:var(--primary);color:white}
+.btn-primary:hover{background:var(--primary-dark);transform:translateY(-1px)}
+.btn-outline{background:white;color:var(--text);border:1px solid var(--border)}
+.btn-outline:hover{border-color:var(--navy);background:var(--bg)}
+.btn-danger{background:var(--red);color:white}
+.btn-danger:hover{background:#DC2626}
+.btn-sm{padding:5px 12px;font-size:12.5px}
+.btn-icon{width:32px;height:32px;padding:0;justify-content:center;border-radius:var(--r);border:1px solid var(--border);background:white;font-size:15px}
+.btn-icon:hover{background:var(--bg)}
+
+/* ── CARDS ────────────────────────────────────────────────── */
+.card{background:white;border-radius:var(--r-lg);border:1px solid var(--border);box-shadow:var(--shadow)}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.card-title{font-size:15px;font-weight:700}
+.card-body{padding:20px}
+
+/* ── METRIC CARDS ─────────────────────────────────────────── */
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:16px;margin-bottom:24px}
+.metric-card{background:white;border-radius:var(--r-lg);border:1px solid var(--border);padding:18px;box-shadow:var(--shadow);transition:box-shadow .2s,transform .2s}
+.metric-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.metric-icon{width:40px;height:40px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:12px}
+.metric-value{font-size:26px;font-weight:800;line-height:1;margin-bottom:4px}
+.metric-label{font-size:12px;color:var(--text2);font-weight:500}
+.metric-delta{font-size:11.5px;font-weight:600;margin-top:6px}
+.delta-up{color:var(--primary)}
+.delta-down{color:var(--red)}
+
+/* ── TABLES ───────────────────────────────────────────────── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11.5px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg)}
+td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:13.5px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#F8FAFC}
+.td-actions{display:flex;gap:4px;justify-content:flex-end}
+
+/* ── BADGES ───────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:var(--r-full)}
+.badge-green{background:#DCFCE7;color:#166534}
+.badge-amber{background:#FEF9C3;color:#854D0E}
+.badge-red{background:#FEE2E2;color:#991B1B}
+.badge-blue{background:#DBEAFE;color:#1E40AF}
+.badge-purple{background:#EDE9FE;color:#5B21B6}
+.badge-gray{background:#F1F5F9;color:var(--text2)}
+.status-dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.dot-green{background:var(--primary)}
+.dot-amber{background:var(--amber)}
+.dot-red{background:var(--red)}
+.dot-blue{background:var(--blue)}
+
+/* ── SEARCH & FILTERS ─────────────────────────────────────── */
+.table-toolbar{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.search-box{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:7px 12px;min-width:220px;flex:1}
+.search-box input{border:none;outline:none;background:transparent;font-size:13px;width:100%}
+.search-box span{color:var(--text3);font-size:15px}
+.filter-select{padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:white;color:var(--text);cursor:pointer;outline:none}
+.filter-select:focus{border-color:var(--primary)}
+
+/* ── PAGINATION ───────────────────────────────────────────── */
+.pagination{display:flex;align-items:center;justify-content:between;padding:14px 16px;border-top:1px solid var(--border);gap:8px}
+.pagination-info{font-size:12.5px;color:var(--text2);flex:1}
+.page-btn{width:30px;height:30px;border-radius:var(--r);border:1px solid var(--border);background:white;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
+.page-btn:hover:not(:disabled){border-color:var(--primary);color:var(--primary)}
+.page-btn.active{background:var(--primary);color:white;border-color:var(--primary)}
+.page-btn:disabled{opacity:.4;cursor:default}
+
+/* ── MODALS ───────────────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(3px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .15s ease}
+.modal{background:white;border-radius:var(--r-xl);width:100%;max-width:540px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);animation:slideUp .2s ease}
+.modal-lg{max-width:760px}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);flex-shrink:0}
+.modal-header h3{font-size:16px;font-weight:700}
+.modal-close{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:none;display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;color:var(--text2);transition:background .15s}
+.modal-close:hover{background:var(--bg)}
+.modal-body{overflow-y:auto;padding:22px;flex:1}
+.modal-footer{padding:16px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:12.5px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px}
+.form-input,.form-select,.form-textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r);font-size:13.5px;outline:none;transition:border-color .2s;background:white;color:var(--text)}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--primary)}
+.form-textarea{resize:vertical;min-height:80px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-hint{font-size:11.5px;color:var(--text3);margin-top:4px}
+.form-toggle{display:flex;align-items:center;justify-content:space-between;padding:10px 0}
+.toggle-label{font-size:13.5px;font-weight:500}
+.toggle-switch{position:relative;width:42px;height:24px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+.toggle-slider{position:absolute;inset:0;border-radius:var(--r-full);background:#CBD5E1;cursor:pointer;transition:background .2s}
+.toggle-slider::before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;border-radius:50%;background:white;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.toggle-switch input:checked+.toggle-slider{background:var(--primary)}
+.toggle-switch input:checked+.toggle-slider::before{transform:translateX(18px)}
+
+/* ── UPLOAD WIDGET ────────────────────────────────────────── */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--r-lg);min-height:100px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--bg);transition:all .2s;position:relative;overflow:hidden}
+.upload-zone:hover{border-color:var(--primary);background:var(--primary-light)}
+.upload-zone.has-image{border-style:solid;min-height:140px}
+.upload-zone img{width:100%;height:140px;object-fit:cover;display:block}
+.upload-zone-inner{text-align:center;padding:16px}
+.upload-zone-icon{font-size:26px;margin-bottom:6px}
+.upload-zone-text{font-size:13px;font-weight:600;color:var(--primary)}
+.upload-zone-hint{font-size:11.5px;color:var(--text3)}
+.upload-remove{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.5);color:white;border:none;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer}
+.upload-progress{height:3px;background:var(--border);border-radius:var(--r-full);margin-top:6px;overflow:hidden;display:none}
+.upload-progress-bar{height:100%;background:var(--primary);border-radius:var(--r-full);width:0%;transition:width .3s}
+.upload-status-text{font-size:11.5px;margin-top:4px;min-height:16px}
+.upload-status-text.ok{color:var(--primary)}
+.upload-status-text.err{color:var(--red)}
+
+/* ── CHARTS ───────────────────────────────────────────────── */
+.charts-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:20px;margin-bottom:24px}
+.chart-wrap{position:relative;height:240px}
+
+/* ── EMPTY STATE ──────────────────────────────────────────── */
+.empty-state{text-align:center;padding:60px 20px}
+.empty-state-icon{font-size:44px;margin-bottom:14px}
+.empty-state-title{font-size:17px;font-weight:700;margin-bottom:6px}
+.empty-state-text{font-size:13.5px;color:var(--text2);max-width:340px;margin:0 auto 20px}
+
+/* ── DETAIL PANELS ────────────────────────────────────────── */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.detail-item{background:var(--bg);border-radius:var(--r);padding:10px 12px}
+.detail-label{font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.detail-value{font-size:13.5px;font-weight:600;color:var(--text)}
+
+/* ── TOAST ────────────────────────────────────────────────── */
+#toast{position:fixed;bottom:28px;right:28px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast-item{background:var(--navy2);color:white;padding:11px 18px;border-radius:var(--r-lg);font-size:13.5px;font-weight:500;box-shadow:var(--shadow-lg);animation:toastIn .25s ease;pointer-events:none;max-width:320px;display:flex;align-items:center;gap:10px}
+.toast-item.success{background:#166534}
+.toast-item.error{background:#991B1B}
+
+/* ── TABS ─────────────────────────────────────────────────── */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab{padding:10px 16px;font-size:13.5px;font-weight:600;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab:hover:not(.active){color:var(--text)}
+
+/* ── AVATAR ───────────────────────────────────────────────── */
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+
+/* ── QUICK ACTIONS ────────────────────────────────────────── */
+.quick-actions{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+.qa-card{background:white;border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;cursor:pointer;transition:all .15s;text-align:center}
+.qa-card:hover{border-color:var(--primary);box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.qa-icon{font-size:26px;margin-bottom:8px}
+.qa-label{font-size:12.5px;font-weight:600;color:var(--text)}
+
+/* ── CATEGORY GRID ────────────────────────────────────────── */
+.cat-grid-admin{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.cat-card-admin{background:white;border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;transition:box-shadow .15s}
+.cat-card-admin:hover{box-shadow:var(--shadow-md)}
+.cat-card-img{height:100px;object-fit:cover;width:100%;display:block;background:var(--bg)}
+.cat-card-img-placeholder{height:100px;display:flex;align-items:center;justify-content:center;font-size:36px;background:var(--bg)}
+.cat-card-body{padding:12px}
+.cat-card-name{font-size:14px;font-weight:700;margin-bottom:2px}
+.cat-card-meta{font-size:11.5px;color:var(--text2)}
+.cat-card-actions{display:flex;gap:4px;margin-top:8px}
+
+/* ── SETTINGS ─────────────────────────────────────────────── */
+.settings-grid{display:grid;grid-template-columns:200px 1fr;gap:24px}
+.settings-menu .smenu-item{padding:9px 12px;border-radius:var(--r);cursor:pointer;font-size:13.5px;font-weight:500;color:var(--text2);transition:all .15s;margin-bottom:2px}
+.settings-menu .smenu-item.active,.settings-menu .smenu-item:hover{background:var(--primary-light);color:var(--primary-dark)}
+.settings-panel{background:white;border:1px solid var(--border);border-radius:var(--r-lg);padding:24px}
+.settings-panel h3{font-size:16px;font-weight:700;margin-bottom:4px}
+.settings-panel .settings-desc{font-size:13px;color:var(--text2);margin-bottom:22px}
+.settings-divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+
+/* ── ANIMATIONS ───────────────────────────────────────────── */
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+
+/* ── RESPONSIVE ───────────────────────────────────────────── */
+@media(max-width:900px){
+  #sidebar{position:fixed;left:-var(--sidebar-w);z-index:200;transition:left .25s}
+  #sidebar.open{left:0}
+  .charts-grid{grid-template-columns:1fr}
+  .form-row{grid-template-columns:1fr}
+  .settings-grid{grid-template-columns:1fr}
+  .metrics-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══════════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-brand-logo">🏠</div>
+      <div>
+        <div class="login-brand-name">House Helper</div>
+        <div class="login-brand-sub">Admin Dashboard</div>
+      </div>
+    </div>
+    <h2>Welcome back</h2>
+    <p>Enter your 4-digit admin PIN to continue</p>
+    <div class="pin-row" id="pin-row">
+      <input type="password" inputmode="numeric" maxlength="1" class="pin-input" id="p0" oninput="pinInput(0,this)" onkeydown="pinKey(0,event)">
+      <input type="password" inputmode="numeric" maxlength="1" class="pin-input" id="p1" oninput="pinInput(1,this)" onkeydown="pinKey(1,event)">
+      <input type="password" inputmode="numeric" maxlength="1" class="pin-input" id="p2" oninput="pinInput(2,this)" onkeydown="pinKey(2,event)">
+      <input type="password" inputmode="numeric" maxlength="1" class="pin-input" id="p3" oninput="pinInput(3,this)" onkeydown="pinKey(3,event)" onkeyup="if(this.value)verifyPin()">
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+    <button class="btn-login" onclick="verifyPin()">Sign In →</button>
+  </div>
+</div>
+
+<!-- ══ APP ════════════════════════════════════════════════════ -->
+<div id="app">
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-logo">🏠</div>
+      <div class="sidebar-brand-text">
+        <div class="sidebar-brand-name">House Helper</div>
+        <div class="sidebar-brand-role">Admin Panel</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">Main</div>
+      <div class="nav-item active" onclick="nav('dashboard')"><span class="nav-icon">📊</span>Dashboard</div>
+      <div class="nav-item" onclick="nav('bookings')"><span class="nav-icon">📋</span>Bookings<span class="nav-badge" id="nb-pending" style="display:none">0</span></div>
+      <div class="nav-item" onclick="nav('customers')"><span class="nav-icon">👥</span>Customers</div>
+      <div class="sidebar-section">Catalogue</div>
+      <div class="nav-item" onclick="nav('services')"><span class="nav-icon">🔧</span>Services</div>
+      <div class="nav-item" onclick="nav('categories')"><span class="nav-icon">📂</span>Categories</div>
+      <div class="nav-item" onclick="nav('coupons')"><span class="nav-icon">🎟️</span>Coupons</div>
+      <div class="sidebar-section">Engagement</div>
+      <div class="nav-item" onclick="nav('reviews')"><span class="nav-icon">⭐</span>Reviews</div>
+      <div class="nav-item" onclick="nav('banners')"><span class="nav-icon">🖼️</span>Banners</div>
+      <div class="nav-item" onclick="nav('notifications')"><span class="nav-icon">🔔</span>Notifications</div>
+      <div class="sidebar-section">Business</div>
+      <div class="nav-item" onclick="nav('reports')"><span class="nav-icon">📈</span>Reports</div>
+      <div class="nav-item" onclick="nav('analytics')"><span class="nav-icon">🔬</span>Analytics</div>
+      <div class="nav-item" onclick="nav('leads')"><span class="nav-icon">🎯</span>Leads</div>
+      <div class="nav-item" onclick="nav('settings')"><span class="nav-icon">⚙️</span>Settings</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user" onclick="handleLogout()">
+        <div class="sidebar-avatar">A</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name">Admin</div>
+          <div class="sidebar-user-role">Sign out</div>
+        </div>
+        <span style="color:rgba(255,255,255,.3);font-size:15px">→</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div id="main">
+    <header id="topbar">
+      <button style="display:none;background:none;border:none;font-size:20px;margin-right:8px" id="menu-toggle" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <div class="topbar-search">
+        <span>🔍</span>
+        <input id="global-search" placeholder="Search anything…" oninput="handleGlobalSearch(this.value)">
+      </div>
+      <div class="topbar-actions">
+        <div class="topbar-btn" title="Refresh data" onclick="loadAll(true)">🔄</div>
+        <div class="topbar-btn" title="Open customer app" onclick="window.open('index.html','_blank')">📱</div>
+        <div class="topbar-btn" style="background:var(--primary);border-color:var(--primary)">
+          <span style="color:white;font-size:13px;font-weight:700">A</span>
+        </div>
+      </div>
+    </header>
+    <main id="content"></main>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// HOUSE HELPER ADMIN DASHBOARD
+// ══════════════════════════════════════════════════════════════
+
+const SUPABASE_URL = 'https://zvuhsxqwhitjhndlnujv.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_3uTlDh-VxEVXUptPKj-uGQ_x3wOPQaE';
+const ADMIN_SESSION_KEY = 'hh_admin_dash_session';
+const DEFAULT_PIN = '1234';
+
+let sb = null;
+let DB = { services: [], categories: [], bookings: [], ratings: {}, settings: {} };
+let UI = { section: 'dashboard', page: 1, search: '', filter: 'all', settingsTab: 'business' };
+let uploadStates = {}; // widget state per container id
+let charts = {};
+
+// ── SUPABASE INIT ──────────────────────────────────────────
+try {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch(e) { console.warn('Supabase init failed', e); }
+
+// ── AUTH ───────────────────────────────────────────────────
+function pinInput(i, el) {
+  if (el.value && i < 3) document.getElementById('p' + (i+1)).focus();
+}
+function pinKey(i, e) {
+  if (e.key === 'Backspace' && !document.getElementById('p'+i).value && i > 0)
+    document.getElementById('p'+(i-1)).focus();
+}
+function verifyPin() {
+  const pin = [0,1,2,3].map(i => document.getElementById('p'+i).value).join('');
+  if (pin.length < 4) { document.getElementById('pin-error').textContent = 'Enter all 4 digits'; return; }
+  const adminPin = DB.settings?.admin_pin || DEFAULT_PIN;
+  if (pin !== adminPin) {
+    document.getElementById('pin-error').textContent = 'Incorrect PIN. Try again.';
+    [0,1,2,3].forEach(i => document.getElementById('p'+i).value = '');
+    document.getElementById('p0').focus();
+    return;
+  }
+  sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({ active: true, ts: Date.now() }));
+  showApp();
+}
+function handleLogout() {
+  if (!confirm('Sign out of Admin Dashboard?')) return;
+  sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  location.reload();
+}
+function checkSession() {
+  try {
+    const s = JSON.parse(sessionStorage.getItem(ADMIN_SESSION_KEY));
+    return s?.active && (Date.now() - s.ts) < 8 * 60 * 60 * 1000;
+  } catch { return false; }
+}
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  loadAll(true).then(() => nav('dashboard'));
+}
+
+// ── NAVIGATION ─────────────────────────────────────────────
+const SECTION_TITLES = {
+  dashboard:'Dashboard', bookings:'Bookings', customers:'Customers',
+  services:'Services', categories:'Categories', coupons:'Coupons',
+  reviews:'Reviews', banners:'Banners', notifications:'Notifications',
+  reports:'Reports', analytics:'Analytics', leads:'Lead Management',
+  settings:'Settings'
+};
+function nav(section) {
+  UI.section = section; UI.page = 1; UI.search = ''; UI.filter = 'all';
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => {
+    if (el.textContent.trim().startsWith(SECTION_TITLES[section]?.slice(0,5) || '??'))
+      el.classList.add('active');
+  });
+  document.getElementById('topbar-title').textContent = SECTION_TITLES[section] || section;
+  renderSection(section);
+}
+function renderSection(s) {
+  const fns = { dashboard: renderDashboard, bookings: renderBookings, customers: renderCustomers,
+    services: renderServices, categories: renderCategories, coupons: renderCoupons,
+    reviews: renderReviews, banners: renderBanners, notifications: renderNotifications,
+    reports: renderReports, analytics: renderAnalytics, leads: renderLeads,
+    settings: renderSettings };
+  if (fns[s]) fns[s](); else document.getElementById('content').innerHTML = `<div class="empty-state"><div class="empty-state-icon">🚧</div><div class="empty-state-title">Coming soon</div><div class="empty-state-text">This section is under construction.</div></div>`;
+}
+
+// ── DATA LOADING ───────────────────────────────────────────
+async function loadAll(showSpinner) {
+  if (showSpinner) showToast('Refreshing data…', 'info', 1500);
+  DB.bookings = JSON.parse(localStorage.getItem('hh_bookings') || '[]');
+  DB.ratings  = JSON.parse(localStorage.getItem('hh_ratings') || '{}');
+  DB.settings = JSON.parse(localStorage.getItem('hh_settings') || '{}');
+  if (!DB.settings.business_name) DB.settings.business_name = 'House Helper';
+  if (!DB.settings.admin_pin) DB.settings.admin_pin = DEFAULT_PIN;
+  if (sb) {
+    try {
+      const [{ data: svcs }, { data: cats }, { data: sets }] = await Promise.all([
+        sb.from('services').select('*,service_categories(name)').order('sort_order'),
+        sb.from('service_categories').select('*').order('sort_order'),
+        sb.from('app_settings').select('*'),
+      ]);
+      if (svcs) DB.services = svcs;
+      if (cats) DB.categories = cats;
+      if (sets) sets.forEach(s => { DB.settings[s.key] = s.value; });
+    } catch(e) { console.warn('Supabase load failed', e); }
+  }
+  updateBadges();
+}
+function updateBadges() {
+  const pending = DB.bookings.filter(b => b.status === 'pending').length;
+  const nb = document.getElementById('nb-pending');
+  if (nb) { nb.textContent = pending; nb.style.display = pending ? 'inline-flex' : 'none'; }
+}
+
+// ── FORMATTERS ─────────────────────────────────────────────
+const fmt = n => '₹' + (n||0).toLocaleString('en-IN');
+const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+const fmtTime = d => d ? new Date(d).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) : '';
+const fmtDateTime = d => d ? fmtDate(d) + ' ' + fmtTime(d) : '—';
+const getInitials = name => (name || 'A').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+
+const STATUS_COLORS = {
+  pending:    'badge-amber', confirmed:  'badge-blue', assigned:   'badge-blue',
+  in_progress:'badge-purple', completed: 'badge-green', cancelled:  'badge-red',
+  refunded:   'badge-gray'
+};
+const STATUS_LABELS = {
+  pending:'Pending', confirmed:'Confirmed', assigned:'Assigned',
+  in_progress:'In Progress', completed:'Completed', cancelled:'Cancelled', refunded:'Refunded'
+};
+
+// ── TOAST ──────────────────────────────────────────────────
+function showToast(msg, type = 'info', dur = 3000) {
+  const t = document.getElementById('toast');
+  const el = document.createElement('div');
+  el.className = `toast-item ${type === 'success' ? 'success' : type === 'error' ? 'error' : ''}`;
+  el.innerHTML = `<span>${type==='success'?'✓':type==='error'?'✕':'ℹ'}</span>${msg}`;
+  t.appendChild(el);
+  setTimeout(() => el.remove(), dur);
+}
+
+// ── MODAL ──────────────────────────────────────────────────
+function openModal(html) {
+  closeModal();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'active-modal';
+  overlay.innerHTML = html;
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+  document.body.appendChild(overlay);
+}
+function closeModal() {
+  const m = document.getElementById('active-modal');
+  if (m) m.remove();
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════════
+function renderDashboard() {
+  const B = DB.bookings;
+  const today = new Date().toDateString();
+  const completed = B.filter(b => b.status === 'completed');
+  const revenue = completed.reduce((s, b) => s + (b.final_price || 0), 0);
+  const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+  const monthRevenue = completed.filter(b => new Date(b.created_at) >= monthStart)
+    .reduce((s, b) => s + (b.final_price || 0), 0);
+  const customers = [...new Set(B.map(b => b.customerId))];
+  const avgRating = Object.values(DB.ratings).length
+    ? (Object.values(DB.ratings).reduce((s,r) => s + r.rating, 0) / Object.values(DB.ratings).length).toFixed(1)
+    : '—';
+
+  const metrics = [
+    { icon:'📋', label:'Total Bookings',    value: B.length,                       bg:'#EFF6FF', ic:'#3B82F6' },
+    { icon:'📅', label:'Today\'s Bookings', value: B.filter(b=>new Date(b.created_at).toDateString()===today).length, bg:'#F3E8FF', ic:'#8B5CF6' },
+    { icon:'⏳', label:'Pending',           value: B.filter(b=>b.status==='pending').length,   bg:'#FEF9C3', ic:'#CA8A04' },
+    { icon:'🔧', label:'In Progress',       value: B.filter(b=>b.status==='in_progress').length, bg:'#FFEDD5', ic:'#EA580C' },
+    { icon:'✅', label:'Completed',         value: completed.length,               bg:'#DCFCE7', ic:'#16A34A' },
+    { icon:'❌', label:'Cancelled',         value: B.filter(b=>b.status==='cancelled').length, bg:'#FEE2E2', ic:'#DC2626' },
+    { icon:'💰', label:'Total Revenue',     value: fmt(revenue),                   bg:'#DCFCE7', ic:'#16A34A', big:true },
+    { icon:'📆', label:'Monthly Revenue',   value: fmt(monthRevenue),              bg:'#DBEAFE', ic:'#2563EB', big:true },
+    { icon:'👥', label:'Customers',         value: customers.length,               bg:'#F3E8FF', ic:'#7C3AED' },
+    { icon:'🔧', label:'Active Services',   value: DB.services.filter(s=>s.is_active).length, bg:'#DCFCE7', ic:'#16A34A' },
+    { icon:'📂', label:'Categories',        value: DB.categories.filter(c=>c.is_active).length, bg:'#FEF9C3', ic:'#CA8A04' },
+    { icon:'⭐', label:'Avg Rating',        value: avgRating,                      bg:'#FEF9C3', ic:'#CA8A04' },
+  ];
+
+  const recentBookings = [...B].sort((a,b) => new Date(b.created_at)-new Date(a.created_at)).slice(0,5);
+  const recentCustomers = customers.slice(-5).map(phone => {
+    const bks = B.filter(b => b.customerId === phone);
+    return { phone, name: bks[0]?.customerName || 'Customer', count: bks.length, last: bks[bks.length-1]?.created_at };
+  }).reverse();
+
+  document.getElementById('content').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div><h1 style="font-size:22px;font-weight:800">Dashboard Overview</h1><p style="color:var(--text2);font-size:13px;margin-top:2px">${new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</p></div>
+      <button class="btn btn-primary" onclick="nav('bookings')">View All Bookings</button>
+    </div>
+
+    <div class="metrics-grid">${metrics.map(m => `
+      <div class="metric-card">
+        <div class="metric-icon" style="background:${m.bg};color:${m.ic}">${m.icon}</div>
+        <div class="metric-value" style="${m.big?'font-size:20px':''}">${m.value}</div>
+        <div class="metric-label">${m.label}</div>
+      </div>`).join('')}
+    </div>
+
+    <div class="charts-grid">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Revenue Trend</div>
+          <select class="filter-select" style="font-size:12px;padding:4px 8px" onchange="updateRevenueChart(this.value)" id="rev-period">
+            <option value="7">Last 7 days</option><option value="30">Last 30 days</option>
+          </select>
+        </div>
+        <div class="card-body"><div class="chart-wrap"><canvas id="chart-revenue"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Bookings by Status</div></div>
+        <div class="card-body"><div class="chart-wrap"><canvas id="chart-status"></canvas></div></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:20px;margin-bottom:24px">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Recent Bookings</div>
+          <button class="btn btn-sm btn-outline" onclick="nav('bookings')">View all</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Service</th><th>Customer</th><th>Status</th><th>Date</th></tr></thead>
+          <tbody>${recentBookings.length ? recentBookings.map(b => `<tr>
+            <td><div style="font-weight:600;font-size:13px">${b.serviceName||'—'}</div><div style="font-size:11.5px;color:var(--text2)">#${(b.id||'').slice(-6)}</div></td>
+            <td>${b.customerName||b.customerId||'—'}</td>
+            <td><span class="badge ${STATUS_COLORS[b.status]||'badge-gray'}">${STATUS_LABELS[b.status]||b.status}</span></td>
+            <td style="font-size:12px;color:var(--text2)">${fmtDate(b.created_at)}</td>
+          </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:30px">No bookings yet</td></tr>'}</tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Recent Customers</div>
+          <button class="btn btn-sm btn-outline" onclick="nav('customers')">View all</button>
+        </div>
+        <div class="card-body" style="padding:0">${recentCustomers.length ? recentCustomers.map(c => `
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)">
+            <div class="avatar" style="background:hsl(${c.phone.length*37%360},60%,50%)">${getInitials(c.name)}</div>
+            <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">${c.name}</div><div style="font-size:11.5px;color:var(--text2)">${c.phone} · ${c.count} booking${c.count!==1?'s':''}</div></div>
+            <div style="font-size:11.5px;color:var(--text3)">${fmtDate(c.last)}</div>
+          </div>`).join('') : '<div style="text-align:center;color:var(--text3);padding:30px">No customers yet</div>'}
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Quick Actions</div></div>
+        <div class="card-body">
+          <div class="quick-actions">
+            <div class="qa-card" onclick="nav('services');setTimeout(openAddServiceModal,200)"><div class="qa-icon">➕</div><div class="qa-label">Add Service</div></div>
+            <div class="qa-card" onclick="nav('categories');setTimeout(openAddCategoryModal,200)"><div class="qa-icon">📂</div><div class="qa-label">Add Category</div></div>
+            <div class="qa-card" onclick="nav('bookings')"><div class="qa-icon">📋</div><div class="qa-label">View Bookings</div></div>
+            <div class="qa-card" onclick="nav('reports')"><div class="qa-icon">📈</div><div class="qa-label">Reports</div></div>
+            <div class="qa-card" onclick="nav('settings')"><div class="qa-icon">⚙️</div><div class="qa-label">Settings</div></div>
+            <div class="qa-card" onclick="window.open('index.html','_blank')"><div class="qa-icon">📱</div><div class="qa-label">Customer App</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Top Services</div></div>
+        <div class="card-body" style="padding:0">${
+          (() => {
+            const counts = {};
+            DB.bookings.forEach(b => { counts[b.serviceName] = (counts[b.serviceName]||0) + 1; });
+            const top = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+            const max = top[0]?.[1] || 1;
+            return top.length ? top.map(([name,count]) => `
+              <div style="padding:10px 16px;border-bottom:1px solid var(--border)">
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                  <span style="font-size:13px;font-weight:500">${name}</span>
+                  <span style="font-size:12px;font-weight:600;color:var(--primary)">${count} booking${count!==1?'s':''}</span>
+                </div>
+                <div style="height:4px;background:var(--border);border-radius:99px;overflow:hidden">
+                  <div style="height:100%;width:${Math.round(count/max*100)}%;background:var(--primary);border-radius:99px"></div>
+                </div>
+              </div>`).join('')
+            : '<div style="text-align:center;color:var(--text3);padding:30px">No booking data yet</div>';
+          })()
+        }</div>
+      </div>
+    </div>`;
+
+  renderCharts('7');
+}
+
+function renderCharts(days) {
+  const B = DB.bookings;
+  const n = parseInt(days);
+  const labels = [], revenue = [], bookingCounts = [];
+  for (let i = n-1; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate()-i); d.setHours(0,0,0,0);
+    const next = new Date(d); next.setDate(d.getDate()+1);
+    const dayBookings = B.filter(b => { const bd = new Date(b.created_at); return bd>=d && bd<next; });
+    labels.push(d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'}));
+    revenue.push(dayBookings.filter(b=>b.status==='completed').reduce((s,b)=>s+(b.final_price||0),0));
+    bookingCounts.push(dayBookings.length);
+  }
+  if (charts.revenue) charts.revenue.destroy();
+  if (charts.status) charts.status.destroy();
+  const rc = document.getElementById('chart-revenue');
+  const sc = document.getElementById('chart-status');
+  if (rc) {
+    charts.revenue = new Chart(rc, {
+      type:'line', data:{ labels, datasets:[
+        {label:'Revenue (₹)',data:revenue,borderColor:'#16A34A',backgroundColor:'rgba(22,163,74,.08)',tension:.35,fill:true,pointRadius:3,pointBackgroundColor:'#16A34A'},
+        {label:'Bookings',data:bookingCounts,borderColor:'#3B82F6',backgroundColor:'rgba(59,130,246,.06)',tension:.35,fill:true,pointRadius:3,pointBackgroundColor:'#3B82F6',yAxisID:'y2'},
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},scales:{y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:11},callback:v=>'₹'+v.toLocaleString('en-IN')}},y2:{position:'right',grid:{display:false},ticks:{font:{size:11}}}}}
+    });
+  }
+  if (sc) {
+    const statuses = ['pending','confirmed','in_progress','completed','cancelled'];
+    const counts = statuses.map(s => B.filter(b=>b.status===s).length);
+    charts.status = new Chart(sc, {
+      type:'doughnut', data:{ labels:['Pending','Confirmed','In Progress','Completed','Cancelled'],
+        datasets:[{data:counts,backgroundColor:['#FCD34D','#60A5FA','#A78BFA','#4ADE80','#F87171'],borderWidth:0}]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11},padding:8}}},cutout:'65%'}
+    });
+  }
+}
+function updateRevenueChart(days) { renderCharts(days); }
+
+// ══════════════════════════════════════════════════════════════
+// BOOKINGS
+// ══════════════════════════════════════════════════════════════
+const PAGE_SIZE = 15;
+function renderBookings() {
+  let filtered = DB.bookings.filter(b => {
+    const q = UI.search.toLowerCase();
+    const matchSearch = !q || (b.serviceName||'').toLowerCase().includes(q) || (b.customerName||'').toLowerCase().includes(q) || (b.customerId||'').includes(q) || (b.id||'').includes(q);
+    const matchFilter = UI.filter === 'all' || b.status === UI.filter;
+    return matchSearch && matchFilter;
+  }).sort((a,b) => new Date(b.created_at)-new Date(a.created_at));
+
+  const total = filtered.length;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const page = DB.bookings.length ? filtered.slice((UI.page-1)*PAGE_SIZE, UI.page*PAGE_SIZE) : [];
+
+  document.getElementById('content').innerHTML = `
+    <div class="card">
+      <div class="table-toolbar">
+        <div class="search-box" style="flex:2"><span>🔍</span><input placeholder="Search bookings…" value="${UI.search}" oninput="UI.search=this.value;UI.page=1;renderBookings()"></div>
+        <select class="filter-select" onchange="UI.filter=this.value;UI.page=1;renderBookings()">
+          <option value="all" ${UI.filter==='all'?'selected':''}>All Status</option>
+          ${Object.entries(STATUS_LABELS).map(([k,v]) => `<option value="${k}" ${UI.filter===k?'selected':''}>${v}</option>`).join('')}
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="exportBookingsCSV()">⬇ Export CSV</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Booking ID</th><th>Service</th><th>Customer</th><th>Date</th><th>Amount</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
+        <tbody>${page.length ? page.map(b => `<tr>
+          <td><span style="font-family:monospace;font-size:12px">#${(b.id||'').slice(-8)}</span></td>
+          <td><div style="font-weight:600;max-width:160px">${b.serviceName||'—'}</div></td>
+          <td><div style="font-weight:500">${b.customerName||'Customer'}</div><div style="font-size:11.5px;color:var(--text2)">${b.customerId||''}</div></td>
+          <td style="font-size:12.5px;color:var(--text2)">${fmtDate(b.created_at)}</td>
+          <td style="font-weight:700;color:var(--primary)">${b.final_price ? fmt(b.final_price) : '—'}</td>
+          <td><span class="badge ${STATUS_COLORS[b.status]||'badge-gray'}">${STATUS_LABELS[b.status]||b.status}</span></td>
+          <td><div class="td-actions">
+            <button class="btn btn-icon btn-sm" title="View" onclick="viewBooking('${b.id}')">👁</button>
+            <select style="font-size:12px;padding:4px 6px;border:1px solid var(--border);border-radius:var(--r);background:white;cursor:pointer" onchange="updateBookingStatus('${b.id}',this.value)">
+              ${Object.entries(STATUS_LABELS).map(([k,v]) => `<option value="${k}" ${b.status===k?'selected':''}>${v}</option>`).join('')}
+            </select>
+          </div></td>
+        </tr>`).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:40px">No bookings found</td></tr>'}</tbody>
+      </table></div>
+      <div class="pagination">
+        <div class="pagination-info">Showing ${Math.min((UI.page-1)*PAGE_SIZE+1,total)}–${Math.min(UI.page*PAGE_SIZE,total)} of ${total}</div>
+        <button class="page-btn" onclick="UI.page--;renderBookings()" ${UI.page<=1?'disabled':''}>←</button>
+        ${Array.from({length:Math.min(totalPages,5)},(_, i) => {
+          const p = i+1; return `<button class="page-btn ${UI.page===p?'active':''}" onclick="UI.page=${p};renderBookings()">${p}</button>`;
+        }).join('')}
+        <button class="page-btn" onclick="UI.page++;renderBookings()" ${UI.page>=totalPages?'disabled':''}>→</button>
+      </div>
+    </div>`;
+}
+
+function viewBooking(id) {
+  const b = DB.bookings.find(x => x.id === id);
+  if (!b) return;
+  const svc = DB.services.find(s => s.id === b.serviceId);
+  openModal(`<div class="modal modal-lg">
+    <div class="modal-header"><h3>Booking Details — #${(b.id||'').slice(-8)}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+        ${[['Service',b.serviceName||'—'],['Status',`<span class="badge ${STATUS_COLORS[b.status]}">${STATUS_LABELS[b.status]||b.status}</span>`],
+           ['Customer',b.customerName||'Customer'],['Phone',b.customerId||'—'],
+           ['Date',fmtDateTime(b.created_at)],['Amount',b.final_price?fmt(b.final_price):'—'],
+           ['Payment',b.paymentMethod||'—'],['Address',b.address||'—'],
+        ].map(([l,v]) => `<div class="detail-item"><div class="detail-label">${l}</div><div class="detail-value">${v}</div></div>`).join('')}
+      </div>
+      ${b.notes?`<div style="background:var(--bg);border-radius:var(--r);padding:12px;margin-bottom:16px"><div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:4px">NOTES</div><div style="font-size:13.5px">${b.notes}</div></div>`:''}
+      ${b.payment_screenshot?`<div><div style="font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:8px">PAYMENT SCREENSHOT</div><img src="${b.payment_screenshot}" style="max-width:100%;border-radius:var(--r-lg);border:1px solid var(--border)"></div>`:''}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Close</button>
+      <select class="filter-select" onchange="updateBookingStatus('${b.id}',this.value)">
+        ${Object.entries(STATUS_LABELS).map(([k,v]) => `<option value="${k}" ${b.status===k?'selected':''}>${v}</option>`).join('')}
+      </select>
+    </div>
+  </div>`);
+}
+
+function updateBookingStatus(id, status) {
+  DB.bookings = DB.bookings.map(b => b.id === id ? { ...b, status } : b);
+  localStorage.setItem('hh_bookings', JSON.stringify(DB.bookings));
+  updateBadges();
+  showToast('Booking updated ✓', 'success');
+  if (UI.section === 'bookings') renderBookings();
+}
+
+function exportBookingsCSV() {
+  const rows = [['ID','Service','Customer','Phone','Status','Amount','Date']];
+  DB.bookings.forEach(b => rows.push([b.id,b.serviceName,b.customerName||'',b.customerId||'',b.status,b.final_price||'',b.created_at||'']));
+  const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv,' + encodeURIComponent(csv);
+  a.download = `bookings-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  showToast('CSV exported ✓', 'success');
+}
+
+// ══════════════════════════════════════════════════════════════
+// CUSTOMERS
+// ══════════════════════════════════════════════════════════════
+function renderCustomers() {
+  const custMap = {};
+  DB.bookings.forEach(b => {
+    if (!custMap[b.customerId]) custMap[b.customerId] = { phone: b.customerId, name: b.customerName || 'Customer', bookings: [], totalSpent: 0 };
+    custMap[b.customerId].bookings.push(b);
+    if (b.status === 'completed') custMap[b.customerId].totalSpent += (b.final_price || 0);
+  });
+  let customers = Object.values(custMap).sort((a,b) => b.bookings.length - a.bookings.length);
+  if (UI.search) customers = customers.filter(c => c.name.toLowerCase().includes(UI.search.toLowerCase()) || c.phone.includes(UI.search));
+  const total = customers.length;
+  const page = customers.slice((UI.page-1)*PAGE_SIZE, UI.page*PAGE_SIZE);
+
+  document.getElementById('content').innerHTML = `
+    <div class="card">
+      <div class="table-toolbar">
+        <div class="search-box"><span>🔍</span><input placeholder="Search customers…" value="${UI.search}" oninput="UI.search=this.value;UI.page=1;renderCustomers()"></div>
+        <div style="margin-left:auto;font-size:13px;color:var(--text2);font-weight:500">${total} customer${total!==1?'s':''}</div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Customer</th><th>Phone</th><th>Total Bookings</th><th>Completed</th><th>Total Spent</th><th>Last Booking</th></tr></thead>
+        <tbody>${page.length ? page.map(c => {
+          const last = c.bookings.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+          return `<tr>
+            <td><div style="display:flex;align-items:center;gap:8px">
+              <div class="avatar" style="background:hsl(${c.phone.length*37%360},60%,50%)">${getInitials(c.name)}</div>
+              <span style="font-weight:600">${c.name}</span>
+            </div></td>
+            <td style="font-family:monospace;font-size:13px">${c.phone}</td>
+            <td style="font-weight:600">${c.bookings.length}</td>
+            <td><span class="badge badge-green">${c.bookings.filter(b=>b.status==='completed').length}</span></td>
+            <td style="font-weight:700;color:var(--primary)">${fmt(c.totalSpent)}</td>
+            <td style="font-size:12.5px;color:var(--text2)">${fmtDate(last?.created_at)}</td>
+          </tr>`;
+        }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:40px">No customers yet</td></tr>'}</tbody>
+      </table></div>
+      <div class="pagination">
+        <div class="pagination-info">${total} customers total</div>
+        <button class="page-btn" onclick="UI.page--;renderCustomers()" ${UI.page<=1?'disabled':''}>←</button>
+        ${Array.from({length:Math.min(Math.ceil(total/PAGE_SIZE),5)},(_, i) => `<button class="page-btn ${UI.page===i+1?'active':''}" onclick="UI.page=${i+1};renderCustomers()">${i+1}</button>`).join('')}
+        <button class="page-btn" onclick="UI.page++;renderCustomers()" ${UI.page>=Math.ceil(total/PAGE_SIZE)?'disabled':''}>→</button>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// SERVICES
+// ══════════════════════════════════════════════════════════════
+function renderServices() {
+  let filtered = DB.services.filter(s => {
+    const q = UI.search.toLowerCase();
+    const matchQ = !q || s.name.toLowerCase().includes(q) || (s.description||'').toLowerCase().includes(q);
+    const matchF = UI.filter === 'all' || (UI.filter === 'active' ? s.is_active : !s.is_active) || (UI.filter === 'featured' ? s.is_featured : true) && UI.filter === 'featured';
+    return matchQ && (UI.filter === 'all' || UI.filter === (s.is_active ? 'active' : 'inactive') || UI.filter === 'featured' && s.is_featured);
+  });
+  const total = filtered.length;
+  const page = filtered.slice((UI.page-1)*PAGE_SIZE, UI.page*PAGE_SIZE);
+
+  document.getElementById('content').innerHTML = `
+    <div class="card">
+      <div class="table-toolbar">
+        <div class="search-box" style="flex:2"><span>🔍</span><input placeholder="Search services…" value="${UI.search}" oninput="UI.search=this.value;UI.page=1;renderServices()"></div>
+        <select class="filter-select" onchange="UI.filter=this.value;UI.page=1;renderServices()">
+          <option value="all">All Services</option>
+          <option value="active" ${UI.filter==='active'?'selected':''}>Active</option>
+          <option value="inactive" ${UI.filter==='inactive'?'selected':''}>Inactive</option>
+          <option value="featured" ${UI.filter==='featured'?'selected':''}>Featured</option>
+        </select>
+        <select class="filter-select" onchange="UI.catFilter=this.value;UI.page=1;renderServices()">
+          <option value="">All Categories</option>
+          ${DB.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
+        </select>
+        <button class="btn btn-primary" onclick="openAddServiceModal()">＋ Add Service</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Service</th><th>Category</th><th>Price</th><th>Status</th><th>Featured</th><th style="text-align:right">Actions</th></tr></thead>
+        <tbody>${page.length ? page.map(s => `<tr>
+          <td><div style="display:flex;align-items:center;gap:10px">
+            ${s.image_url ? `<img src="${s.image_url}" style="width:38px;height:38px;border-radius:var(--r);object-fit:cover;flex-shrink:0">` : `<div style="width:38px;height:38px;border-radius:var(--r);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🔧</div>`}
+            <div><div style="font-weight:600">${s.name}</div><div style="font-size:11.5px;color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.description||'—'}</div></div>
+          </div></td>
+          <td><span class="badge badge-gray">${s.service_categories?.name||'—'}</span></td>
+          <td style="font-weight:700;color:var(--primary)">₹${(s.base_price||0).toLocaleString('en-IN')} <span style="font-weight:400;color:var(--text2);font-size:12px">/${s.price_unit||'visit'}</span></td>
+          <td><span class="badge ${s.is_active?'badge-green':'badge-gray'}">${s.is_active?'Active':'Inactive'}</span></td>
+          <td>${s.is_featured?'<span class="badge badge-amber">⭐ Featured</span>':'<span style="color:var(--text3);font-size:12px">—</span>'}</td>
+          <td><div class="td-actions">
+            <button class="btn btn-icon btn-sm" title="Edit" onclick="openEditServiceModal('${s.id}')">✏️</button>
+            <button class="btn btn-icon btn-sm" title="Delete" onclick="confirmDeleteService('${s.id}','${s.name.replace(/'/g,"\\'")}')">🗑️</button>
+          </div></td>
+        </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:40px">No services found</td></tr>'}</tbody>
+      </table></div>
+      <div class="pagination">
+        <div class="pagination-info">${total} service${total!==1?'s':''}</div>
+        <button class="page-btn" onclick="UI.page--;renderServices()" ${UI.page<=1?'disabled':''}>←</button>
+        ${Array.from({length:Math.min(Math.ceil(total/PAGE_SIZE),5)},(_, i)=>`<button class="page-btn ${UI.page===i+1?'active':''}" onclick="UI.page=${i+1};renderServices()">${i+1}</button>`).join('')}
+        <button class="page-btn" onclick="UI.page++;renderServices()" ${UI.page>=Math.ceil(total/PAGE_SIZE)?'disabled':''}>→</button>
+      </div>
+    </div>`;
+}
+
+function serviceModalHTML(s) {
+  const isEdit = !!s;
+  return `<div class="modal modal-lg">
+    <div class="modal-header"><h3>${isEdit?'Edit':'Add'} Service</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Service Name *</label>
+          <input id="sm-name" class="form-input" value="${s?.name||''}" placeholder="e.g. Deep House Cleaning">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category *</label>
+          <select id="sm-cat" class="form-select">
+            <option value="">Select category</option>
+            ${DB.categories.map(c=>`<option value="${c.id}" ${s?.category_id===c.id?'selected':''}>${c.name}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Description</label><textarea id="sm-desc" class="form-textarea" placeholder="Describe what's included…">${s?.description||''}</textarea></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Base Price (₹) *</label>
+          <input id="sm-price" class="form-input" type="number" value="${s?.base_price||''}" placeholder="499">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Price Unit</label>
+          <select id="sm-unit" class="form-select">
+            ${['visit','room','unit','day','hour'].map(u=>`<option value="${u}" ${s?.price_unit===u?'selected':''}>${u}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Service Image</label>
+        <div id="sm-upload" class="upload-zone ${s?.image_url?'has-image':''}" onclick="document.getElementById('sm-file').click()">
+          ${s?.image_url ? `<img src="${s.image_url}" id="sm-preview-img"><button class="upload-remove" type="button" onclick="event.stopPropagation();removeUploadPreview('sm')">✕</button>` : `<div class="upload-zone-inner"><div class="upload-zone-icon">🖼️</div><div class="upload-zone-text">Click to upload</div><div class="upload-zone-hint">JPG, PNG, WebP — auto-optimised</div></div>`}
+        </div>
+        <div class="upload-progress" id="sm-progress"><div class="upload-progress-bar" id="sm-pbar"></div></div>
+        <div class="upload-status-text" id="sm-status"></div>
+        <input type="file" id="sm-file" accept="image/*,.heic" style="display:none" onchange="handleUploadWidget('sm','service-images','services',this.files[0],'${s?.image_url||''}')">
+        <input type="hidden" id="sm-imageurl" value="${s?.image_url||''}">
+      </div>
+      <div style="display:flex;gap:20px">
+        <label class="form-toggle" style="flex:1"><span class="toggle-label">Active (visible to customers)</span><label class="toggle-switch"><input type="checkbox" id="sm-active" ${s?.is_active!==false?'checked':''}><span class="toggle-slider"></span></label></label>
+        <label class="form-toggle" style="flex:1"><span class="toggle-label">Featured on Home Screen</span><label class="toggle-switch"><input type="checkbox" id="sm-featured" ${s?.is_featured?'checked':''}><span class="toggle-slider"></span></label></label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="sm-save" onclick="saveService('${s?.id||''}')">
+        ${isEdit?'Save Changes':'Add Service'}
+      </button>
+    </div>
+  </div>`;
+}
+
+function openAddServiceModal() { openModal(serviceModalHTML(null)); }
+function openEditServiceModal(id) { openModal(serviceModalHTML(DB.services.find(s=>s.id===id))); }
+
+async function saveService(id) {
+  const name = document.getElementById('sm-name').value.trim();
+  const catId = document.getElementById('sm-cat').value;
+  const price = parseFloat(document.getElementById('sm-price').value);
+  if (!name) { showToast('Service name is required', 'error'); return; }
+  if (!catId) { showToast('Please select a category', 'error'); return; }
+  if (!price) { showToast('Please enter a valid price', 'error'); return; }
+  const saveBtn = document.getElementById('sm-save');
+  saveBtn.innerHTML = '<span class="spinner"></span> Saving…'; saveBtn.disabled = true;
+  const payload = {
+    name, category_id: catId,
+    description: document.getElementById('sm-desc').value.trim(),
+    base_price: price, price_unit: document.getElementById('sm-unit').value,
+    is_active: document.getElementById('sm-active').checked,
+    is_featured: document.getElementById('sm-featured').checked,
+    image_url: document.getElementById('sm-imageurl')?.value || null,
+  };
+  try {
+    let error;
+    if (id) { ({ error } = await sb.from('services').update(payload).eq('id', id)); }
+    else     { ({ error } = await sb.from('services').insert(payload)); }
+    if (error) throw error;
+    showToast(id ? 'Service updated ✓' : 'Service added ✓', 'success');
+    closeModal();
+    await loadAll(false);
+    renderServices();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); saveBtn.innerHTML = id?'Save Changes':'Add Service'; saveBtn.disabled = false; }
+}
+
+function confirmDeleteService(id, name) {
+  openModal(`<div class="modal"><div class="modal-header"><h3>Delete Service</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body"><p style="font-size:14px">Are you sure you want to delete <strong>${name}</strong>? This action cannot be undone.</p></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-danger" onclick="deleteService('${id}')">Delete</button></div></div>`);
+}
+async function deleteService(id) {
+  try {
+    const { error } = await sb.from('services').delete().eq('id', id);
+    if (error) throw error;
+    showToast('Service deleted', 'success');
+    closeModal();
+    await loadAll(false);
+    renderServices();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// CATEGORIES
+// ══════════════════════════════════════════════════════════════
+function renderCategories() {
+  let filtered = DB.categories.filter(c => !UI.search || c.name.toLowerCase().includes(UI.search.toLowerCase()));
+  document.getElementById('content').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="search-box" style="width:260px"><span>🔍</span><input placeholder="Search categories…" value="${UI.search}" oninput="UI.search=this.value;renderCategories()"></div>
+      <button class="btn btn-primary" onclick="openAddCategoryModal()">＋ Add Category</button>
+    </div>
+    <div class="cat-grid-admin">${filtered.length ? filtered.map(c => `
+      <div class="cat-card-admin">
+        ${c.image_url ? `<img src="${c.image_url}" class="cat-card-img" onerror="this.style.display='none'">` : `<div class="cat-card-img-placeholder">📂</div>`}
+        <div class="cat-card-body">
+          <div class="cat-card-name">${c.name}</div>
+          <div class="cat-card-meta">${c.description||'No description'} · ${DB.services.filter(s=>s.category_id===c.id).length} services</div>
+          <div style="margin-top:6px"><span class="badge ${c.is_active?'badge-green':'badge-gray'}">${c.is_active?'Active':'Inactive'}</span></div>
+          <div class="cat-card-actions">
+            <button class="btn btn-outline btn-sm" onclick="openEditCategoryModal('${c.id}')">✏️ Edit</button>
+            <button class="btn btn-sm" style="background:var(--bg);border:1px solid var(--border)" onclick="toggleCategory('${c.id}',${!c.is_active})">${c.is_active?'Disable':'Enable'}</button>
+            <button class="btn btn-sm" style="color:var(--red);border:1px solid #FCA5A5;background:white" onclick="confirmDeleteCategory('${c.id}','${c.name.replace(/'/g,"\\'")}')">🗑️</button>
+          </div>
+        </div>
+      </div>`).join('') : `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">📂</div><div class="empty-state-title">No categories</div><div class="empty-state-text">Add your first category to get started.</div><button class="btn btn-primary" onclick="openAddCategoryModal()">Add Category</button></div>`}
+    </div>`;
+}
+
+function categoryModalHTML(c) {
+  return `<div class="modal">
+    <div class="modal-header"><h3>${c?'Edit':'Add'} Category</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Category Name *</label><input id="cm-name" class="form-input" value="${c?.name||''}" placeholder="e.g. Plumbing"></div>
+      <div class="form-group"><label class="form-label">Description</label><input id="cm-desc" class="form-input" value="${c?.description||''}" placeholder="Short description"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Sort Order</label><input id="cm-sort" class="form-input" type="number" value="${c?.sort_order||0}" min="0"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category Photo</label>
+        <div id="cm-upload" class="upload-zone ${c?.image_url?'has-image':''}" onclick="document.getElementById('cm-file').click()">
+          ${c?.image_url ? `<img src="${c.image_url}" id="cm-preview-img"><button class="upload-remove" type="button" onclick="event.stopPropagation();removeUploadPreview('cm')">✕</button>` : `<div class="upload-zone-inner"><div class="upload-zone-icon">🖼️</div><div class="upload-zone-text">Click to upload photo</div><div class="upload-zone-hint">JPG, PNG, WebP — auto-optimised</div></div>`}
+        </div>
+        <div class="upload-progress" id="cm-progress"><div class="upload-progress-bar" id="cm-pbar"></div></div>
+        <div class="upload-status-text" id="cm-status"></div>
+        <input type="file" id="cm-file" accept="image/*,.heic" style="display:none" onchange="handleUploadWidget('cm','service-images','categories',this.files[0],'${c?.image_url||''}')">
+        <input type="hidden" id="cm-imageurl" value="${c?.image_url||''}">
+      </div>
+      <label class="form-toggle"><span class="toggle-label">Active (visible to customers)</span><label class="toggle-switch"><input type="checkbox" id="cm-active" ${c?.is_active!==false?'checked':''}><span class="toggle-slider"></span></label></label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="cm-save" onclick="saveCategory('${c?.id||''}')">
+        ${c?'Save Changes':'Add Category'}
+      </button>
+    </div>
+  </div>`;
+}
+function openAddCategoryModal() { openModal(categoryModalHTML(null)); }
+function openEditCategoryModal(id) { openModal(categoryModalHTML(DB.categories.find(c=>c.id===id))); }
+
+async function saveCategory(id) {
+  const name = document.getElementById('cm-name').value.trim();
+  if (!name) { showToast('Category name is required', 'error'); return; }
+  const saveBtn = document.getElementById('cm-save');
+  saveBtn.innerHTML = '<span class="spinner"></span> Saving…'; saveBtn.disabled = true;
+  const payload = {
+    name, description: document.getElementById('cm-desc').value.trim(),
+    sort_order: parseInt(document.getElementById('cm-sort').value)||0,
+    is_active: document.getElementById('cm-active').checked,
+    icon_name: 'wrench',
+    image_url: document.getElementById('cm-imageurl')?.value || null,
+  };
+  try {
+    let error;
+    if (id) { ({ error } = await sb.from('service_categories').update(payload).eq('id', id)); }
+    else     { ({ error } = await sb.from('service_categories').insert(payload)); }
+    if (error) throw error;
+    showToast(id ? 'Category updated ✓' : 'Category added ✓', 'success');
+    closeModal();
+    await loadAll(false);
+    renderCategories();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); saveBtn.innerHTML = id?'Save Changes':'Add Category'; saveBtn.disabled = false; }
+}
+async function toggleCategory(id, active) {
+  try {
+    const { error } = await sb.from('service_categories').update({ is_active: active }).eq('id', id);
+    if (error) throw error;
+    showToast(active ? 'Category enabled ✓' : 'Category disabled', 'success');
+    await loadAll(false); renderCategories();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+function confirmDeleteCategory(id, name) {
+  openModal(`<div class="modal"><div class="modal-header"><h3>Delete Category</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body"><p style="font-size:14px">Delete <strong>${name}</strong>? Services in this category will become uncategorised.</p></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-danger" onclick="deleteCategory('${id}')">Delete</button></div></div>`);
+}
+async function deleteCategory(id) {
+  try {
+    const { error } = await sb.from('service_categories').delete().eq('id', id);
+    if (error) throw error;
+    showToast('Category deleted', 'success');
+    closeModal(); await loadAll(false); renderCategories();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// REVIEWS
+// ══════════════════════════════════════════════════════════════
+function renderReviews() {
+  const ratings = Object.values(DB.ratings);
+  const avg = ratings.length ? (ratings.reduce((s,r)=>s+r.rating,0)/ratings.length).toFixed(1) : '—';
+  document.getElementById('content').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
+      <div class="card"><div class="card-body" style="text-align:center"><div style="font-size:36px;font-weight:800;color:var(--primary)">${avg}</div><div style="font-size:13px;color:var(--text2)">Average Rating</div><div style="font-size:20px;margin-top:4px">⭐⭐⭐⭐⭐</div></div></div>
+      <div class="card"><div class="card-body" style="text-align:center"><div style="font-size:36px;font-weight:800">${ratings.length}</div><div style="font-size:13px;color:var(--text2)">Total Reviews</div></div></div>
+      <div class="card"><div class="card-body" style="text-align:center"><div style="font-size:36px;font-weight:800;color:var(--primary)">${ratings.filter(r=>r.rating>=4).length}</div><div style="font-size:13px;color:var(--text2)">Positive (4★+)</div></div></div>
+    </div>
+    ${ratings.length ? `<div style="display:grid;gap:12px">${ratings.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(r => `
+      <div class="card"><div class="card-body" style="display:flex;align-items:flex-start;gap:14px">
+        <div class="avatar">${getInitials(r.userName||'U')}</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-weight:700">${r.userName||'Customer'}</span>
+            <span style="color:#FCD34D;font-size:14px">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span>
+            <span class="badge badge-amber">${r.rating}/5</span>
+          </div>
+          <div style="font-size:13.5px;color:var(--text2);margin-bottom:4px">${r.comment||'No comment'}</div>
+          <div style="font-size:11.5px;color:var(--text3)">${r.serviceName||''} · ${fmtDate(r.date)}</div>
+        </div>
+        <button class="btn btn-sm btn-outline" style="color:var(--red)" onclick="deleteReview('${r.id||r.bookingId}')">Delete</button>
+      </div></div>`).join('')}` : `<div class="empty-state"><div class="empty-state-icon">⭐</div><div class="empty-state-title">No reviews yet</div><div class="empty-state-text">Customer reviews will appear here after they rate their completed bookings.</div></div>`}`;
+}
+function deleteReview(id) {
+  if (!confirm('Delete this review?')) return;
+  delete DB.ratings[id];
+  localStorage.setItem('hh_ratings', JSON.stringify(DB.ratings));
+  showToast('Review deleted', 'success'); renderReviews();
+}
+
+// ══════════════════════════════════════════════════════════════
+// COUPONS
+// ══════════════════════════════════════════════════════════════
+function renderCoupons() {
+  const coupons = JSON.parse(localStorage.getItem('hh_coupons') || '[]');
+  document.getElementById('content').innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <button class="btn btn-primary" onclick="openAddCouponModal()">＋ Create Coupon</button>
+    </div>
+    ${coupons.length ? `<div class="card"><div class="table-wrap"><table>
+      <thead><tr><th>Code</th><th>Type</th><th>Value</th><th>Min Order</th><th>Usage</th><th>Expiry</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${coupons.map(c=>`<tr>
+        <td><code style="background:var(--bg);padding:3px 8px;border-radius:4px;font-size:13px;font-weight:700">${c.code}</code></td>
+        <td>${c.type==='percent'?'Percentage':'Flat'}</td>
+        <td style="font-weight:700;color:var(--primary)">${c.type==='percent'?c.value+'%':'₹'+c.value}</td>
+        <td>${c.minOrder?'₹'+c.minOrder:'—'}</td>
+        <td>${c.usedCount||0}${c.maxUse?' / '+c.maxUse:''}</td>
+        <td style="font-size:12.5px">${c.expiry?fmtDate(c.expiry):'No expiry'}</td>
+        <td><span class="badge ${c.active?'badge-green':'badge-gray'}">${c.active?'Active':'Inactive'}</span></td>
+        <td><div class="td-actions">
+          <button class="btn btn-icon btn-sm" onclick="toggleCoupon('${c.code}')">${c.active?'⏸':'▶'}</button>
+          <button class="btn btn-icon btn-sm" onclick="deleteCoupon('${c.code}')">🗑️</button>
+        </div></td>
+      </tr>`).join('')}</tbody>
+    </table></div></div>` : `<div class="empty-state"><div class="empty-state-icon">🎟️</div><div class="empty-state-title">No coupons yet</div><div class="empty-state-text">Create discount codes for your customers.</div><button class="btn btn-primary" onclick="openAddCouponModal()">Create Coupon</button></div>`}`;
+}
+function openAddCouponModal() {
+  openModal(`<div class="modal"><div class="modal-header"><h3>Create Coupon</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Coupon Code *</label><input id="cp-code" class="form-input" placeholder="SAVE20" style="text-transform:uppercase"></div>
+        <div class="form-group"><label class="form-label">Discount Type</label>
+          <select id="cp-type" class="form-select"><option value="percent">Percentage</option><option value="flat">Flat Amount</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Value *</label><input id="cp-val" class="form-input" type="number" placeholder="20"></div>
+        <div class="form-group"><label class="form-label">Min Order (₹)</label><input id="cp-min" class="form-input" type="number" placeholder="0"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Max Uses</label><input id="cp-max" class="form-input" type="number" placeholder="Unlimited"></div>
+        <div class="form-group"><label class="form-label">Expiry Date</label><input id="cp-exp" class="form-input" type="date"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveCoupon()">Create Coupon</button></div></div>`);
+}
+function saveCoupon() {
+  const code = document.getElementById('cp-code').value.trim().toUpperCase();
+  const val = parseFloat(document.getElementById('cp-val').value);
+  if (!code || !val) { showToast('Code and value are required', 'error'); return; }
+  const coupons = JSON.parse(localStorage.getItem('hh_coupons')||'[]');
+  coupons.push({ code, type: document.getElementById('cp-type').value, value: val,
+    minOrder: parseFloat(document.getElementById('cp-min').value)||0,
+    maxUse: parseInt(document.getElementById('cp-max').value)||null,
+    expiry: document.getElementById('cp-exp').value||null, usedCount:0, active:true });
+  localStorage.setItem('hh_coupons', JSON.stringify(coupons));
+  showToast('Coupon created ✓', 'success'); closeModal(); renderCoupons();
+}
+function toggleCoupon(code) {
+  const coupons = JSON.parse(localStorage.getItem('hh_coupons')||'[]').map(c=>c.code===code?{...c,active:!c.active}:c);
+  localStorage.setItem('hh_coupons', JSON.stringify(coupons)); renderCoupons();
+}
+function deleteCoupon(code) {
+  if (!confirm('Delete coupon '+code+'?')) return;
+  const coupons = JSON.parse(localStorage.getItem('hh_coupons')||'[]').filter(c=>c.code!==code);
+  localStorage.setItem('hh_coupons', JSON.stringify(coupons));
+  showToast('Coupon deleted', 'success'); renderCoupons();
+}
+
+// ══════════════════════════════════════════════════════════════
+// BANNERS
+// ══════════════════════════════════════════════════════════════
+function renderBanners() {
+  document.getElementById('content').innerHTML = `
+    <div style="margin-bottom:16px"><h2 style="font-size:16px;font-weight:700">Hero Banners</h2><p style="font-size:13px;color:var(--text2);margin-top:3px">Upload promotional banners for the customer app home screen.</p></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+      ${[1,2,3].map(i => {
+        const url = DB.settings['banner_'+i] || '';
+        return `<div class="card">
+          <div class="card-body">
+            <div id="banner-zone-${i}" class="upload-zone ${url?'has-image':''}" onclick="document.getElementById('banner-file-${i}').click()" style="margin-bottom:10px">
+              ${url ? `<img src="${url}" style="width:100%;height:160px;object-fit:cover"><button class="upload-remove" type="button" onclick="event.stopPropagation();removeBanner(${i})">✕</button>` : `<div class="upload-zone-inner"><div class="upload-zone-icon">🖼️</div><div class="upload-zone-text">Upload Banner ${i}</div><div class="upload-zone-hint">Recommended: 1200×480px</div></div>`}
+            </div>
+            <div class="upload-progress" id="bn${i}-progress"><div class="upload-progress-bar" id="bn${i}-pbar"></div></div>
+            <div class="upload-status-text" id="bn${i}-status"></div>
+            <input type="file" id="banner-file-${i}" accept="image/*" style="display:none" onchange="uploadBanner(${i},this.files[0])">
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+async function uploadBanner(i, file) {
+  if (!file) return;
+  const prefix = 'bn'+i;
+  try {
+    const url = await adminUpload('banners', 'hero', file, prefix);
+    await saveSetting('banner_'+i, url);
+    renderBanners();
+    showToast('Banner uploaded ✓', 'success');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+async function removeBanner(i) {
+  await saveSetting('banner_'+i, '');
+  renderBanners();
+  showToast('Banner removed', 'success');
+}
+
+// ══════════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ══════════════════════════════════════════════════════════════
+function renderNotifications() {
+  const notifs = JSON.parse(localStorage.getItem('hh_admin_notifs')||'[]');
+  document.getElementById('content').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Create Notification</div></div>
+        <div class="card-body">
+          <div class="form-group"><label class="form-label">Title</label><input id="nt-title" class="form-input" placeholder="Special offer for you!"></div>
+          <div class="form-group"><label class="form-label">Message</label><textarea id="nt-msg" class="form-textarea" placeholder="Get 20% off your next booking…"></textarea></div>
+          <div class="form-group"><label class="form-label">Type</label>
+            <select id="nt-type" class="form-select"><option value="offer">Offer</option><option value="booking">Booking Update</option><option value="promo">Promotion</option><option value="info">Information</option></select>
+          </div>
+          <button class="btn btn-primary" onclick="createNotification()" style="width:100%">Send Notification</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Sent Notifications</div>
+          <button class="btn btn-sm btn-outline" onclick="clearNotifications()">Clear All</button>
+        </div>
+        <div class="card-body" style="padding:0;max-height:400px;overflow-y:auto">
+          ${notifs.length ? notifs.slice().reverse().map(n => `
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+                <span style="font-weight:700;font-size:13.5px">${n.title}</span>
+                <span class="badge badge-blue" style="font-size:10px">${n.type}</span>
+              </div>
+              <div style="font-size:12.5px;color:var(--text2)">${n.message}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:3px">${fmtDateTime(n.date)}</div>
+            </div>`).join('')
+          : '<div style="text-align:center;color:var(--text3);padding:40px">No notifications sent yet</div>'}
+        </div>
+      </div>
+    </div>`;
+}
+function createNotification() {
+  const title = document.getElementById('nt-title').value.trim();
+  const message = document.getElementById('nt-msg').value.trim();
+  if (!title || !message) { showToast('Title and message are required', 'error'); return; }
+  const notifs = JSON.parse(localStorage.getItem('hh_admin_notifs')||'[]');
+  notifs.push({ title, message, type: document.getElementById('nt-type').value, date: new Date().toISOString() });
+  localStorage.setItem('hh_admin_notifs', JSON.stringify(notifs));
+  showToast('Notification created ✓', 'success'); renderNotifications();
+}
+function clearNotifications() {
+  if (!confirm('Clear all notifications?')) return;
+  localStorage.removeItem('hh_admin_notifs');
+  showToast('Cleared', 'success'); renderNotifications();
+}
+
+// ══════════════════════════════════════════════════════════════
+// REPORTS
+// ══════════════════════════════════════════════════════════════
+function renderReports() {
+  const B = DB.bookings;
+  const completed = B.filter(b=>b.status==='completed');
+  const totalRev = completed.reduce((s,b)=>s+(b.final_price||0),0);
+  document.getElementById('content').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h2 style="font-size:17px;font-weight:700">Business Reports</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="exportReportCSV()">⬇ Export CSV</button>
+        <select class="filter-select" id="report-period" onchange="renderReports()">
+          <option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option>
+        </select>
+      </div>
+    </div>
+    <div class="metrics-grid" style="grid-template-columns:repeat(4,1fr)">
+      ${[['💰','Total Revenue',fmt(totalRev),'#DCFCE7','#16A34A'],
+         ['📋','Total Bookings',B.length,'#DBEAFE','#2563EB'],
+         ['✅','Completion Rate',B.length?Math.round(completed.length/B.length*100)+'%':'0%','#DCFCE7','#16A34A'],
+         ['👥','Unique Customers',[...new Set(B.map(b=>b.customerId))].length,'#EDE9FE','#7C3AED']
+      ].map(([icon,label,value,bg,ic])=>`
+        <div class="metric-card">
+          <div class="metric-icon" style="background:${bg};color:${ic}">${icon}</div>
+          <div class="metric-value">${value}</div>
+          <div class="metric-label">${label}</div>
+        </div>`).join('')}
+    </div>
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header"><div class="card-title">Revenue & Bookings Over Time</div></div>
+      <div class="card-body"><div style="height:300px"><canvas id="chart-report"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Service Performance</div></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Service</th><th>Bookings</th><th>Completed</th><th>Revenue</th><th>Completion %</th></tr></thead>
+        <tbody>${(() => {
+          const svcStats = {};
+          B.forEach(b => {
+            if (!svcStats[b.serviceName]) svcStats[b.serviceName] = { total:0, completed:0, revenue:0 };
+            svcStats[b.serviceName].total++;
+            if (b.status==='completed') { svcStats[b.serviceName].completed++; svcStats[b.serviceName].revenue += b.final_price||0; }
+          });
+          return Object.entries(svcStats).sort((a,b)=>b[1].total-a[1].total).map(([name,s]) => `<tr>
+            <td style="font-weight:600">${name}</td>
+            <td>${s.total}</td>
+            <td><span class="badge badge-green">${s.completed}</span></td>
+            <td style="font-weight:700;color:var(--primary)">${fmt(s.revenue)}</td>
+            <td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:4px;background:var(--border);border-radius:99px"><div style="width:${s.total?Math.round(s.completed/s.total*100):0}%;height:100%;background:var(--primary);border-radius:99px"></div></div><span style="font-size:12px">${s.total?Math.round(s.completed/s.total*100):0}%</span></div></td>
+          </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:30px">No data yet</td></tr>';
+        })()}</tbody>
+      </table></div>
+    </div>`;
+  setTimeout(() => {
+    const days = parseInt(document.getElementById('report-period')?.value||'30');
+    const labels=[], rev=[], bks=[];
+    for(let i=days-1;i>=0;i--){
+      const d=new Date();d.setDate(d.getDate()-i);d.setHours(0,0,0,0);
+      const nd=new Date(d);nd.setDate(d.getDate()+1);
+      const day=B.filter(b=>{const bd=new Date(b.created_at);return bd>=d&&bd<nd;});
+      labels.push(d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'}));
+      rev.push(day.filter(b=>b.status==='completed').reduce((s,b)=>s+(b.final_price||0),0));
+      bks.push(day.length);
+    }
+    if(charts.report) charts.report.destroy();
+    const rc=document.getElementById('chart-report');
+    if(rc) charts.report=new Chart(rc,{type:'bar',data:{labels,datasets:[{label:'Revenue (₹)',data:rev,backgroundColor:'rgba(22,163,74,.7)',yAxisID:'y'},{label:'Bookings',data:bks,backgroundColor:'rgba(59,130,246,.7)',yAxisID:'y2'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>'₹'+v.toLocaleString('en-IN')}},y2:{position:'right',grid:{display:false}}}}});
+  }, 50);
+}
+function exportReportCSV() {
+  const rows = [['Service','Total Bookings','Completed','Revenue']];
+  const svcStats = {};
+  DB.bookings.forEach(b => {
+    if (!svcStats[b.serviceName]) svcStats[b.serviceName]={total:0,completed:0,revenue:0};
+    svcStats[b.serviceName].total++;
+    if (b.status==='completed'){svcStats[b.serviceName].completed++;svcStats[b.serviceName].revenue+=b.final_price||0;}
+  });
+  Object.entries(svcStats).forEach(([n,s])=>rows.push([n,s.total,s.completed,s.revenue]));
+  const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv,'+encodeURIComponent(csv);a.download=`report-${new Date().toISOString().split('T')[0]}.csv`;a.click();
+  showToast('Report exported ✓','success');
+}
+
+// ══════════════════════════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════════════════════════
+function renderSettings() {
+  const tabs = ['business','security','payment','social','legal'];
+  const tabNames = {business:'Business',security:'Security',payment:'Payment',social:'Social Links',legal:'Legal'};
+  document.getElementById('content').innerHTML = `
+    <div class="settings-grid">
+      <div class="settings-menu card" style="padding:12px;align-self:start">
+        ${tabs.map(t=>`<div class="smenu-item ${UI.settingsTab===t?'active':''}" onclick="UI.settingsTab='${t}';renderSettings()">${tabNames[t]}</div>`).join('')}
+      </div>
+      <div class="settings-panel" id="settings-panel-content">
+        ${renderSettingsTab(UI.settingsTab)}
+      </div>
+    </div>`;
+}
+
+function renderSettingsTab(tab) {
+  const S = DB.settings;
+  if (tab === 'business') return `
+    <h3>Business Information</h3><p class="settings-desc">Basic details about your business shown to customers.</p>
+    <div class="form-group"><label class="form-label">Business Name</label><input id="st-bname" class="form-input" value="${S.business_name||'House Helper'}"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Support Phone</label><input id="st-phone" class="form-input" value="${S.support_phone||''}"></div>
+      <div class="form-group"><label class="form-label">WhatsApp Number</label><input id="st-whatsapp" class="form-input" value="${S.support_whatsapp||''}"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Support Email</label><input id="st-email" class="form-input" type="email" value="${S.support_email||''}"></div>
+    <div class="form-group"><label class="form-label">Service Area</label><input id="st-area" class="form-input" value="${S.service_area||'Chhindwara, MP'}"></div>
+    <div class="form-group"><label class="form-label">Business Hours</label><input id="st-hours" class="form-input" value="${S.business_hours||'9:00 AM – 7:00 PM'}"></div>
+    <button class="btn btn-primary" onclick="saveSettingsTab('business')">Save Changes</button>`;
+
+  if (tab === 'security') return `
+    <h3>Security</h3><p class="settings-desc">Admin PIN and access settings.</p>
+    <div class="form-group"><label class="form-label">Current Admin PIN</label><input id="st-curpin" class="form-input" type="password" placeholder="Current PIN" maxlength="4" inputmode="numeric"></div>
+    <div class="form-group"><label class="form-label">New Admin PIN</label><input id="st-newpin" class="form-input" type="password" placeholder="4-digit PIN" maxlength="4" inputmode="numeric"></div>
+    <div class="form-group"><label class="form-label">Confirm New PIN</label><input id="st-confpin" class="form-input" type="password" placeholder="Repeat PIN" maxlength="4" inputmode="numeric"></div>
+    <button class="btn btn-primary" onclick="savePin()">Change PIN</button>`;
+
+  if (tab === 'payment') return `
+    <h3>Payment Settings</h3><p class="settings-desc">Configure how customers pay for services.</p>
+    <div class="form-group"><label class="form-label">UPI ID</label><input id="st-upi" class="form-input" value="${S.upi_id||''}" placeholder="yourname@upi"></div>
+    <div class="form-group"><label class="form-label">Business Name on UPI</label><input id="st-upinm" class="form-input" value="${S.upi_name||S.business_name||''}"></div>
+    <hr class="settings-divider">
+    <div class="form-group">
+      <label class="form-label">UPI QR Code</label>
+      <div id="upi-qr-zone" class="upload-zone ${S.upi_qr_url?'has-image':''}" onclick="document.getElementById('upi-qr-file').click()" style="max-width:200px">
+        ${S.upi_qr_url ? `<img src="${S.upi_qr_url}" style="width:200px;height:200px;object-fit:contain"><button class="upload-remove" type="button" onclick="event.stopPropagation();removeUpiQr()">✕</button>` : `<div class="upload-zone-inner"><div class="upload-zone-icon">📷</div><div class="upload-zone-text">Upload QR Code</div></div>`}
+      </div>
+      <div class="upload-progress" id="uqr-progress"><div class="upload-progress-bar" id="uqr-pbar"></div></div>
+      <div class="upload-status-text" id="uqr-status"></div>
+      <input type="file" id="upi-qr-file" accept="image/*" style="display:none" onchange="uploadUpiQr(this.files[0])">
+    </div>
+    <button class="btn btn-primary" onclick="saveSettingsTab('payment')">Save Changes</button>`;
+
+  if (tab === 'social') return `
+    <h3>Social Links</h3><p class="settings-desc">Links shown in the customer app profile section.</p>
+    ${[['Facebook','social_fb','https://facebook.com/'],['Instagram','social_ig','https://instagram.com/'],['YouTube','social_yt','https://youtube.com/'],['Website','social_web','https://']].map(([label,key,ph])=>`
+    <div class="form-group"><label class="form-label">${label}</label><input id="st-${key}" class="form-input" value="${S[key]||''}" placeholder="${ph}"></div>`).join('')}
+    <button class="btn btn-primary" onclick="saveSettingsTab('social')">Save Changes</button>`;
+
+  if (tab === 'legal') return `
+    <h3>Legal & Info Pages</h3><p class="settings-desc">Content shown in the customer app's About / Terms / Privacy sections.</p>
+    <div class="form-group"><label class="form-label">About Us</label><textarea id="st-about" class="form-textarea" style="min-height:120px">${S.about_us||''}</textarea></div>
+    <div class="form-group"><label class="form-label">Privacy Policy</label><textarea id="st-privacy" class="form-textarea" style="min-height:120px">${S.privacy_policy||''}</textarea></div>
+    <div class="form-group"><label class="form-label">Terms & Conditions</label><textarea id="st-terms" class="form-textarea" style="min-height:120px">${S.terms||''}</textarea></div>
+    <button class="btn btn-primary" onclick="saveSettingsTab('legal')">Save Changes</button>`;
+  return '';
+}
+
+async function saveSettingsTab(tab) {
+  const updates = {};
+  if (tab === 'business') Object.assign(updates, { business_name: document.getElementById('st-bname').value, support_phone: document.getElementById('st-phone').value, support_whatsapp: document.getElementById('st-whatsapp').value, support_email: document.getElementById('st-email').value, service_area: document.getElementById('st-area').value, business_hours: document.getElementById('st-hours').value });
+  if (tab === 'payment') Object.assign(updates, { upi_id: document.getElementById('st-upi').value, upi_name: document.getElementById('st-upinm').value });
+  if (tab === 'social') ['social_fb','social_ig','social_yt','social_web'].forEach(k => { updates[k] = document.getElementById('st-'+k)?.value||''; });
+  if (tab === 'legal') Object.assign(updates, { about_us: document.getElementById('st-about').value, privacy_policy: document.getElementById('st-privacy').value, terms: document.getElementById('st-terms').value });
+  for (const [k,v] of Object.entries(updates)) { DB.settings[k] = v; await saveSetting(k, v); }
+  localStorage.setItem('hh_settings', JSON.stringify(DB.settings));
+  showToast('Settings saved ✓', 'success');
+}
+function savePin() {
+  const cur = document.getElementById('st-curpin').value;
+  const nw = document.getElementById('st-newpin').value;
+  const conf = document.getElementById('st-confpin').value;
+  if (cur !== DB.settings.admin_pin) { showToast('Current PIN is incorrect', 'error'); return; }
+  if (nw.length !== 4 || !/^\d{4}$/.test(nw)) { showToast('New PIN must be 4 digits', 'error'); return; }
+  if (nw !== conf) { showToast('PINs do not match', 'error'); return; }
+  DB.settings.admin_pin = nw;
+  saveSetting('admin_pin', nw);
+  localStorage.setItem('hh_settings', JSON.stringify(DB.settings));
+  showToast('PIN changed ✓', 'success');
+}
+async function saveSetting(key, value) {
+  if (sb) {
+    try { await sb.from('app_settings').upsert({ key, value }, { onConflict: 'key' }); } catch(e) {}
+  }
+}
+async function uploadUpiQr(file) {
+  if (!file) return;
+  try {
+    const url = await adminUpload('banners', 'upi', file, 'uqr');
+    await saveSetting('upi_qr_url', url);
+    DB.settings.upi_qr_url = url;
+    localStorage.setItem('hh_settings', JSON.stringify(DB.settings));
+    renderSettings();
+    showToast('QR Code uploaded ✓', 'success');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+async function removeUpiQr() {
+  DB.settings.upi_qr_url = '';
+  await saveSetting('upi_qr_url', '');
+  localStorage.setItem('hh_settings', JSON.stringify(DB.settings));
+  renderSettings();
+}
+
+// ══════════════════════════════════════════════════════════════
+// IMAGE UPLOAD (standalone for admin)
+// ══════════════════════════════════════════════════════════════
+async function adminCompress(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let {width:w, height:h} = img;
+      const max = 1280;
+      if (w > max || h > max) { if (w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;} }
+      const c = Object.assign(document.createElement('canvas'),{width:w,height:h});
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      c.toBlob(blob => {
+        if (!blob) { reject(new Error('Compression failed')); return; }
+        const f = new File([blob], file.name.replace(/\.[^.]+$/,'.jpg'), {type:'image/jpeg'});
+        if (f.size > 4.5*1024*1024) {
+          c.toBlob(b2=>{
+            if(!b2){reject(new Error('Re-compress failed'));return;}
+            resolve(new File([b2],f.name,{type:'image/jpeg'}));
+          },'image/jpeg',.55);
+        } else resolve(f);
+      },'image/jpeg',.82);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Cannot read image')); };
+    img.src = url;
+  });
+}
+
+async function adminUpload(bucket, folder, file, prefix) {
+  const prog = document.getElementById(prefix+'-progress');
+  const pbar = document.getElementById(prefix+'-pbar');
+  const status = document.getElementById(prefix+'-status');
+  if (prog) prog.style.display = 'block';
+  if (status) { status.textContent = 'Optimising…'; status.className = 'upload-status-text'; }
+  let sim = 10; const timer = setInterval(()=>{ if(sim<80){sim+=4;if(pbar)pbar.style.width=sim+'%';}},200);
+  try {
+    const compressed = await adminCompress(file);
+    const uid = Date.now().toString(36)+Math.random().toString(36).slice(2);
+    const path = `${folder}/${uid}.jpg`;
+    const { error } = await sb.storage.from(bucket).upload(path, compressed, {upsert:false, contentType:'image/jpeg'});
+    if (error) throw error;
+    clearInterval(timer);
+    if (pbar) pbar.style.width = '100%';
+    if (status) { status.textContent = 'Uploaded ✓'; status.className = 'upload-status-text ok'; }
+    const { data } = sb.storage.from(bucket).getPublicUrl(path);
+    setTimeout(()=>{ if(prog)prog.style.display='none'; if(status)status.textContent=''; },2000);
+    return data.publicUrl + '?v=' + Date.now();
+  } catch(e) {
+    clearInterval(timer);
+    if (prog) prog.style.display = 'none';
+    if (status) { status.textContent = '⚠ '+e.message; status.className = 'upload-status-text err'; }
+    throw e;
+  }
+}
+
+async function handleUploadWidget(prefix, bucket, folder, file, oldUrl) {
+  if (!file) return;
+  const zone = document.getElementById(prefix+'-upload');
+  const urlInput = document.getElementById(prefix+'-imageurl');
+  // Instant local preview
+  const localUrl = URL.createObjectURL(file);
+  if (zone) zone.innerHTML = `<img src="${localUrl}" style="width:100%;height:140px;object-fit:cover"><button class="upload-remove" type="button" onclick="event.stopPropagation();removeUploadPreview('${prefix}')">✕</button>`;
+  try {
+    const url = await adminUpload(bucket, folder, file, prefix);
+    URL.revokeObjectURL(localUrl);
+    if (urlInput) urlInput.value = url;
+    if (zone) zone.innerHTML = `<img src="${url}" style="width:100%;height:140px;object-fit:cover"><button class="upload-remove" type="button" onclick="event.stopPropagation();removeUploadPreview('${prefix}')">✕</button>`;
+    // Delete old image from storage
+    if (oldUrl) {
+      const marker = `/storage/v1/object/public/${bucket}/`;
+      const idx = oldUrl.indexOf(marker);
+      if (idx !== -1) {
+        const oldPath = decodeURIComponent(oldUrl.slice(idx+marker.length).split('?')[0]);
+        sb.storage.from(bucket).remove([oldPath]).catch(()=>{});
+      }
+    }
+  } catch(e) {
+    URL.revokeObjectURL(localUrl);
+    if (zone) zone.innerHTML = `<div class="upload-zone-inner"><div class="upload-zone-icon">⚠️</div><div class="upload-zone-text" style="color:var(--red)">Upload failed</div><div class="upload-zone-hint">${e.message}</div></div>`;
+    if (urlInput) urlInput.value = '';
+  }
+}
+
+function removeUploadPreview(prefix) {
+  const zone = document.getElementById(prefix+'-upload');
+  const urlInput = document.getElementById(prefix+'-imageurl');
+  if (zone) zone.innerHTML = `<div class="upload-zone-inner"><div class="upload-zone-icon">🖼️</div><div class="upload-zone-text">Click to upload</div><div class="upload-zone-hint">JPG, PNG, WebP — auto-optimised</div></div>`;
+  if (urlInput) urlInput.value = '';
+}
+
+// ══════════════════════════════════════════════════════════════
+// GLOBAL SEARCH
+// ══════════════════════════════════════════════════════════════
+function handleGlobalSearch(q) {
+  if (!q.trim()) return;
+  UI.search = q;
+  if (UI.section === 'services') renderServices();
+  else if (UI.section === 'bookings') renderBookings();
+  else if (UI.section === 'customers') renderCustomers();
+  else if (UI.section === 'categories') renderCategories();
+}
+
+// ══════════════════════════════════════════════════════════════
+// SIDEBAR TOGGLE (mobile)
+// ══════════════════════════════════════════════════════════════
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+async function init() {
+  // Pre-load settings to get admin PIN before showing login
+  DB.settings = JSON.parse(localStorage.getItem('hh_settings') || '{}');
+  if (!DB.settings.admin_pin) DB.settings.admin_pin = DEFAULT_PIN;
+  if (sb) {
+    try {
+      const { data } = await sb.from('app_settings').select('*');
+      if (data) data.forEach(s => { DB.settings[s.key] = s.value; });
+    } catch(e) {}
+  }
+  if (checkSession()) {
+    showApp();
+  } else {
+    document.getElementById('p0').focus();
+  }
+  // Responsive: show sidebar toggle on small screens
+  if (window.innerWidth < 900) {
+    document.getElementById('menu-toggle').style.display = 'flex';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// ANALYTICS
+// ══════════════════════════════════════════════════════════════
+async function renderAnalytics() {
+  document.getElementById('content').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div><h2 style="font-size:20px;font-weight:800">Customer Analytics</h2><p style="color:var(--text2);font-size:13px">First-party data only — tracked inside this app.</p></div>
+      <select class="filter-select" id="ana-period" onchange="renderAnalytics()">
+        <option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option>
+      </select>
+    </div>
+    <div id="ana-loading" style="text-align:center;padding:60px;color:var(--text2)">Loading analytics…</div>`;
+
+  if (!sb) {
+    document.getElementById('ana-loading').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔬</div><div class="empty-state-title">Supabase not connected</div><div class="empty-state-text">Run analytics-schema.sql in Supabase SQL Editor to enable analytics.</div></div>';
+    return;
+  }
+
+  const days = parseInt(document.getElementById('ana-period')?.value || '30');
+  const since = new Date(Date.now() - days * 86400000).toISOString();
+
+  try {
+    const [
+      { data: events },
+      { data: topServices },
+      { data: topSearches },
+      { data: userSessions },
+    ] = await Promise.all([
+      sb.from('analytics_events').select('event_name, user_id, session_id, platform, created_at').gte('created_at', since),
+      sb.from('analytics_top_services').select('*').limit(10),
+      sb.from('analytics_top_searches').select('*').limit(15),
+      sb.from('analytics_user_sessions').select('*'),
+    ]);
+
+    const ev = events || [];
+    const hours = Array(24).fill(0);
+    ev.forEach(e => hours[new Date(e.created_at).getHours()]++);
+
+    const byDay = {};
+    ev.forEach(e => {
+      const d = e.created_at.slice(0,10);
+      if (!byDay[d]) byDay[d] = { events:0, users: new Set() };
+      byDay[d].events++;
+      if (e.user_id) byDay[d].users.add(e.user_id);
+    });
+    const dayLabels = Object.keys(byDay).sort();
+    const dayEvents = dayLabels.map(d => byDay[d].events);
+    const dayUsers  = dayLabels.map(d => byDay[d].users.size);
+
+    const converted = (userSessions||[]).filter(u => u.has_converted).length;
+    const total     = (userSessions||[]).length;
+    const convRate  = total ? Math.round(converted/total*100) : 0;
+    const platforms = { android: ev.filter(e=>e.platform==='android').length, web: ev.filter(e=>e.platform==='web').length };
+
+    document.getElementById('content').innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div><h2 style="font-size:20px;font-weight:800">Customer Analytics</h2><p style="color:var(--text2);font-size:13px">First-party data — last ${days} days</p></div>
+        <select class="filter-select" id="ana-period" onchange="renderAnalytics()">
+          <option value="7" ${days===7?'selected':''}>Last 7 days</option>
+          <option value="30" ${days===30?'selected':''}>Last 30 days</option>
+          <option value="90" ${days===90?'selected':''}>Last 90 days</option>
+        </select>
+      </div>
+
+      <div class="metrics-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:20px">
+        ${[['📊','Total Events',ev.length,'#EFF6FF','#3B82F6'],
+           ['👥','Unique Users',[...new Set(ev.filter(e=>e.user_id).map(e=>e.user_id))].length,'#F3E8FF','#7C3AED'],
+           ['📱','Sessions',[...new Set(ev.map(e=>e.session_id))].length,'#DCFCE7','#16A34A'],
+           ['✅','Conversion Rate',convRate+'%','#DCFCE7','#16A34A'],
+           ['🤖','Android',platforms.android+' / '+platforms.web+' web','#FEF9C3','#CA8A04'],
+        ].map(([icon,label,val,bg,ic])=>`
+          <div class="metric-card">
+            <div class="metric-icon" style="background:${bg};color:${ic}">${icon}</div>
+            <div class="metric-value" style="font-size:20px">${val}</div>
+            <div class="metric-label">${label}</div>
+          </div>`).join('')}
+      </div>
+
+      <div class="charts-grid" style="margin-bottom:20px">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Daily Events & Users</div></div>
+          <div class="card-body"><div style="height:220px"><canvas id="chart-ana-daily"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Peak Usage Hours</div></div>
+          <div class="card-body"><div style="height:220px"><canvas id="chart-ana-hours"></canvas></div></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Most Viewed Services</div></div>
+          <div class="card-body" style="padding:0">${(topServices||[]).length ?
+            (topServices||[]).map((s,i) => `
+              <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border)">
+                <div style="width:22px;height:22px;border-radius:50%;background:var(--primary);color:white;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${i+1}</div>
+                <div style="flex:1;font-size:13.5px;font-weight:500">${s.service_name}</div>
+                <div style="font-size:12px;color:var(--text2)">${s.view_count} views · ${s.unique_viewers} users</div>
+              </div>`).join('')
+            : '<div style="text-align:center;color:var(--text3);padding:30px">No data yet</div>'}
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Top Search Queries</div></div>
+          <div class="card-body" style="padding:0">${(topSearches||[]).length ?
+            (topSearches||[]).map((s,i) => `
+              <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border)">
+                <div style="width:22px;height:22px;border-radius:50%;background:var(--bg);color:var(--text2);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">${i+1}</div>
+                <div style="flex:1;font-size:13.5px;font-weight:500">"${s.query}"</div>
+                <span class="badge badge-blue">${s.search_count}×</span>
+              </div>`).join('')
+            : '<div style="text-align:center;color:var(--text3);padding:30px">No searches tracked yet</div>'}
+          </div>
+        </div>
+      </div>`;
+
+    // Charts
+    setTimeout(() => {
+      const dc = document.getElementById('chart-ana-daily');
+      const hc = document.getElementById('chart-ana-hours');
+      if (dc && dayLabels.length) {
+        new Chart(dc, { type:'line', data:{ labels: dayLabels.map(d=>new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})), datasets:[
+          {label:'Events',data:dayEvents,borderColor:'#3B82F6',backgroundColor:'rgba(59,130,246,.07)',tension:.35,fill:true,pointRadius:2},
+          {label:'Unique Users',data:dayUsers,borderColor:'#16A34A',backgroundColor:'rgba(22,163,74,.07)',tension:.35,fill:true,pointRadius:2},
+        ]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},scales:{y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:11}}}}}});
+      }
+      if (hc) {
+        new Chart(hc, { type:'bar', data:{ labels: Array.from({length:24},(_,i)=>i+':00'), datasets:[{label:'Events',data:hours,backgroundColor:'rgba(124,58,237,.6)',borderRadius:4}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:10}}}}}});
+      }
+    }, 50);
+
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">Could not load analytics</div><div class="empty-state-text">${e.message}<br><br>Make sure you've run analytics-schema.sql in Supabase.</div></div>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// LEAD MANAGEMENT
+// ══════════════════════════════════════════════════════════════
+async function renderLeads() {
+  document.getElementById('content').innerHTML = `
+    <div style="margin-bottom:20px"><h2 style="font-size:20px;font-weight:800">Lead Management</h2><p style="color:var(--text2);font-size:13px">Customers who showed interest but haven't booked yet.</p></div>
+    <div id="leads-loading" style="text-align:center;padding:60px;color:var(--text2)">Analysing customer behaviour…</div>`;
+
+  if (!sb) {
+    document.getElementById('leads-loading').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🎯</div><div class="empty-state-title">Analytics not set up</div><div class="empty-state-text">Run analytics-schema.sql in Supabase to enable lead tracking.</div></div>';
+    return;
+  }
+
+  try {
+    const { data: events } = await sb.from('analytics_events').select('user_id, event_name, created_at, session_id, properties').not('user_id','is',null).order('created_at',{ascending:false}).limit(5000);
+    const { data: profiles } = await sb.from('customer_profiles').select('*');
+
+    if (!events?.length) {
+      document.getElementById('leads-loading').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🎯</div><div class="empty-state-title">No leads yet</div><div class="empty-state-text">Lead data will appear here once customers start using the app.</div></div>';
+      return;
+    }
+
+    // Group by user
+    const byUser = {};
+    events.forEach(e => {
+      if (!byUser[e.user_id]) byUser[e.user_id] = [];
+      byUser[e.user_id].push(e);
+    });
+
+    // Score and classify
+    const leads = Object.entries(byUser).map(([userId, userEvents]) => {
+      const profile = profiles?.find(p => p.user_id === userId);
+      const types = userEvents.map(e => e.event_name);
+      const isCustomer = types.includes('booking_completed');
+      if (isCustomer) return null;
+
+      const services = [...new Set(userEvents.filter(e=>e.event_name==='service_viewed').map(e=>{try{return JSON.parse(e.properties)?.service_name;}catch{return null;}}).filter(Boolean))];
+      const searches = [...new Set(userEvents.filter(e=>e.event_name==='search').map(e=>{try{return JSON.parse(e.properties)?.query;}catch{return null;}}).filter(Boolean))];
+      const bookingStarted = types.includes('booking_started');
+      const whatsappClick  = types.includes('whatsapp_click');
+      const lastEvent = userEvents[0];
+      const hoursSince = (Date.now() - new Date(lastEvent.created_at).getTime()) / 3600000;
+
+      let score = 0;
+      if (bookingStarted) score += 40;
+      if (services.length >= 3) score += 25;
+      if (whatsappClick) score += 20;
+      if (types.includes('book_now_click')) score += 15;
+      if (searches.length >= 2) score += 10;
+      if (hoursSince < 1) score += 20;
+      else if (hoursSince < 24) score += 10;
+      else if (hoursSince < 72) score += 5;
+
+      const label = score >= 60 ? 'Hot Lead' : score >= 30 ? 'Warm Lead' : 'Cold Lead';
+      const color = score >= 60 ? '#EF4444' : score >= 30 ? '#F59E0B' : '#94A3B8';
+      const bg    = score >= 60 ? '#FEE2E2' : score >= 30 ? '#FEF9C3' : '#F1F5F9';
+
+      return { userId, score, label, color, bg, services, searches, bookingStarted, whatsappClick, lastActive: lastEvent.created_at, sessions: [...new Set(userEvents.map(e=>e.session_id))].length, eventCount: userEvents.length, profile };
+    }).filter(Boolean).sort((a,b) => b.score - a.score);
+
+    const hot  = leads.filter(l => l.label === 'Hot Lead');
+    const warm = leads.filter(l => l.label === 'Warm Lead');
+    const cold = leads.filter(l => l.label === 'Cold Lead');
+
+    document.getElementById('content').innerHTML = `
+      <div style="margin-bottom:20px">
+        <h2 style="font-size:20px;font-weight:800">Lead Management</h2>
+        <p style="color:var(--text2);font-size:13px">Based on in-app behaviour — ${leads.length} potential customers identified</p>
+      </div>
+
+      <div class="metrics-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px">
+        <div class="metric-card"><div class="metric-icon" style="background:#FEE2E2;color:#DC2626">🔥</div><div class="metric-value">${hot.length}</div><div class="metric-label">Hot Leads</div></div>
+        <div class="metric-card"><div class="metric-icon" style="background:#FEF9C3;color:#CA8A04">♨️</div><div class="metric-value">${warm.length}</div><div class="metric-label">Warm Leads</div></div>
+        <div class="metric-card"><div class="metric-icon" style="background:#F1F5F9;color:#64748B">🧊</div><div class="metric-value">${cold.length}</div><div class="metric-label">Cold Leads</div></div>
+        <div class="metric-card"><div class="metric-icon" style="background:#DCFCE7;color:#16A34A">🎯</div><div class="metric-value">${leads.filter(l=>l.bookingStarted).length}</div><div class="metric-label">Abandoned Bookings</div></div>
+      </div>
+
+      <div class="card">
+        <div class="table-toolbar">
+          <div style="font-size:14px;font-weight:700">All Leads (${leads.length})</div>
+          <div style="margin-left:auto;display:flex;gap:8px">
+            <select class="filter-select" onchange="filterLeadsTable(this.value)" id="lead-filter">
+              <option value="all">All Leads</option>
+              <option value="Hot Lead">Hot Leads</option>
+              <option value="Warm Lead">Warm Leads</option>
+              <option value="Cold Lead">Cold Leads</option>
+              <option value="abandoned">Abandoned Booking</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap"><table id="leads-table">
+          <thead><tr><th>User</th><th>Lead Score</th><th>Status</th><th>Services Viewed</th><th>Searches</th><th>Sessions</th><th>Last Active</th><th>Actions</th></tr></thead>
+          <tbody>${leads.slice(0,50).map(l => `<tr data-label="${l.label}" data-abandoned="${l.bookingStarted}">
+            <td>
+              <div style="font-weight:600;font-size:13px">${l.profile?.name || l.userId}</div>
+              <div style="font-size:11.5px;color:var(--text2)">${l.userId}</div>
+            </td>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="width:36px;height:36px;border-radius:50%;background:${l.bg};color:${l.color};font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center">${l.score}</div>
+              </div>
+            </td>
+            <td><span style="background:${l.bg};color:${l.color};font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:99px">${l.label}</span>
+              ${l.bookingStarted?'<br><span style="font-size:10.5px;color:var(--red);font-weight:600">⚠ Abandoned</span>':''}
+            </td>
+            <td style="max-width:200px;font-size:12px;color:var(--text2)">${l.services.slice(0,3).join(', ')||'—'}${l.services.length>3?'…':''}</td>
+            <td style="font-size:12px;color:var(--text2)">${l.searches.slice(0,3).map(s=>`"${s}"`).join(', ')||'—'}</td>
+            <td style="font-weight:600">${l.sessions}</td>
+            <td style="font-size:12px;color:var(--text2)">${fmtDateTime(l.lastActive)}</td>
+            <td><div class="td-actions">
+              <button class="btn btn-sm btn-outline" onclick="viewLeadTimeline('${l.userId}')">Timeline</button>
+              <button class="btn btn-sm" style="background:#DCFCE7;color:#16A34A;border:none" onclick="sendLeadFollowup('${l.userId}','${l.label}')">Follow Up</button>
+            </div></td>
+          </tr>`).join('')}</tbody>
+        </table></div>
+      </div>`;
+
+    window._allLeads = leads;
+  } catch(e) {
+    document.getElementById('content').innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">Could not load leads</div><div class="empty-state-text">${e.message}</div></div>`;
+  }
+}
+
+function filterLeadsTable(filter) {
+  document.querySelectorAll('#leads-table tbody tr').forEach(row => {
+    const label = row.dataset.label;
+    const abandoned = row.dataset.abandoned === 'true';
+    const show = filter === 'all' || filter === label || (filter === 'abandoned' && abandoned);
+    row.style.display = show ? '' : 'none';
+  });
+}
+
+async function viewLeadTimeline(userId) {
+  if (!sb) return;
+  const { data: events } = await sb.from('analytics_events').select('*').eq('user_id', userId).order('created_at').limit(200);
+  const ev = events || [];
+  const EVENT_ICONS = { app_opened:'📱', login:'🔐', register:'✨', page_view:'👁', service_viewed:'🔧', category_viewed:'📂', search:'🔍', book_now_click:'🛒', booking_started:'📝', booking_completed:'✅', booking_cancelled:'❌', whatsapp_click:'💬', phone_click:'📞', banner_click:'🖼️', profile_updated:'👤' };
+  openModal(`<div class="modal modal-lg">
+    <div class="modal-header"><h3>Activity Timeline — ${userId}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body" style="max-height:500px;overflow-y:auto">
+      ${ev.length ? ev.map(e => {
+        let props = {};
+        try { props = JSON.parse(e.properties||'{}'); } catch {}
+        const detail = props.service_name || props.query ? ` — ${props.service_name||props.query}` : '';
+        return `<div style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:18px;width:28px;text-align:center;flex-shrink:0">${EVENT_ICONS[e.event_name]||'•'}</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13px">${e.event_name.replace(/_/g,' ')}${detail}</div>
+            <div style="font-size:11.5px;color:var(--text2)">${fmtDateTime(e.created_at)}</div>
+          </div>
+        </div>`;
+      }).join('') : '<div style="text-align:center;color:var(--text3);padding:30px">No events recorded for this user</div>'}
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">Close</button></div>
+  </div>`);
+}
+
+function sendLeadFollowup(userId, leadType) {
+  const msg = encodeURIComponent(`Hi! We noticed you were looking at our services. Can we help you book? Reply here or call us.`);
+  const phone = userId.replace(/\D/g,'');
+  if (phone.length >= 10) {
+    window.open(`https://wa.me/${phone.startsWith('91')?phone:'91'+phone}?text=${msg}`, '_blank');
+  } else {
+    showToast('Phone number not available for this lead', 'error');
+  }
+}
+
+init();
+</script>
+</body>
+</html>
